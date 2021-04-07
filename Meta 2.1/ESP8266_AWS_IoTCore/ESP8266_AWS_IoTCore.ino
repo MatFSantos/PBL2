@@ -33,7 +33,7 @@ NTPClient timeClient(ntpUDP, "pool.ntp.org");
 const char* AWS_endpoint = "a1s2o6e2f4mlx6-ats.iot.us-east-1.amazonaws.com"; //MQTT broker ip
 
 int compara(char s1[],char s2[]) {
- for (int i=0; s1[i] != '\0' && s2[i] != '\0'; i++) { // teste do for fica falso quando uma das strings chegar ao fim, ou pelo return
+ for (int i=0; s1[i] != '\0' && s2[i] != '\0'; i++) {
      if (s1[i] < s2[i])
         return 1;
      else
