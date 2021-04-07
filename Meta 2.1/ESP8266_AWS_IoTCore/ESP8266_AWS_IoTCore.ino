@@ -32,12 +32,32 @@ NTPClient timeClient(ntpUDP, "pool.ntp.org");
 
 const char* AWS_endpoint = "a1s2o6e2f4mlx6-ats.iot.us-east-1.amazonaws.com"; //MQTT broker ip
 
+int compara(char s1[],char s2[]) {
+ for (int i=0; s1[i] != '\0' && s2[i] != '\0'; i++) { // teste do for fica falso quando uma das strings chegar ao fim, ou pelo return
+     if (s1[i] < s2[i])
+        return 1;
+     else
+       if (s1[i] > s2[i])
+          return 1;
+   }
+ //strings iguais
+return 0;
+}
+
 void callback(char* topic, byte* payload, unsigned int length) {
 Serial.print("Message arrived [");
 Serial.print(topic);
 Serial.print("] ");
+char* text = (char*)payload;
+char* flagLedON = "1";
 for (int i = 0; i < length; i++) {
 Serial.print((char)payload[i]);
+}
+if( compara(flagLedON, text) == 0 ){
+  digitalWrite(LED_BUILTIN, LOW);
+}
+else{
+  digitalWrite(LED_BUILTIN, HIGH);
 }
 Serial.println();
 
@@ -79,6 +99,7 @@ espClient.setX509Time(timeClient.getEpochTime());
 }
 
 void reconnect() {
+digitalWrite(LED_BUILTIN, HIGH);
 // Loop until we're reconnected
 while (!client.connected()) {
 Serial.print("Attempting MQTT connection...");
@@ -183,10 +204,11 @@ snprintf (msg, 100, "{\"message\": \"a vida é boa, sim. A vida é boa. #%ld\"}"
 Serial.print("Publish message: ");
 Serial.println(msg);
 client.publish("outTopic", msg);
-Serial.print("Heap: "); Serial.println(ESP.getFreeHeap()); //Low heap can cause problems
+Serial.print("Heap: "); 
+Serial.println(ESP.getFreeHeap()); //Low heap can cause problems
 }
-digitalWrite(LED_BUILTIN, HIGH); // turn the LED on (HIGH is the voltage level)
-delay(100); // wait for a second
-digitalWrite(LED_BUILTIN, LOW); // turn the LED off by making the voltage LOW
-delay(100); // wait for a second
+//digitalWrite(LED_BUILTIN, HIGH); // turn the LED on (HIGH is the voltage level)
+//delay(100); // wait for a second
+//digitalWrite(LED_BUILTIN, LOW); // turn the LED off by making the voltage LOW
+//delay(100); // wait for a second
 }
