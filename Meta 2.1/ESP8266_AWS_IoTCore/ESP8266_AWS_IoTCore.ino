@@ -1,28 +1,8 @@
-/*Developed by M V Subrahmanyam - https://www.linkedin.com/in/veera-subrahmanyam-mediboina-b63997145/
-Project: AWS | NodeMCU ESP32 Tutorials
-Electronics Innovation - www.electronicsinnovation.com
-
-GitHub - https://github.com/VeeruSubbuAmi
-YouTube - http://bit.ly/Electronics_Innovation
-
-Upload date: 07 October 2019
-
-AWS Iot Core
-
-This example needs https://github.com/esp8266/arduino-esp8266fs-plugin
-
-It connects to AWS IoT server then:
-- publishes "hello world" to the topic "outTopic" every two seconds
-- subscribes to the topic "inTopic", printing out any messages
-*/
-
 #include "FS.h"
 #include <ESP8266WiFi.h>
 #include <PubSubClient.h>
 #include <NTPClient.h>
 #include <WiFiUdp.h>
-
-// Update these with values suitable for your network.
 
 const char* ssid = "Gomes2";
 const char* password = "lucas@1111";
@@ -45,9 +25,8 @@ return 0;
 }
 
 void callback(char* topic, byte* payload, unsigned int length) {
-Serial.print("Message arrived [");
+Serial.print("Message arrived: ");
 Serial.print(topic);
-Serial.print("] ");
 char* text = (char*)payload;
 char* flagLedON = "1";
 for (int i = 0; i < length; i++) {
@@ -63,18 +42,16 @@ Serial.println();
 
 }
 WiFiClientSecure espClient;
-PubSubClient client(AWS_endpoint, 8883, callback, espClient); //set MQTT port number to 8883 as per //standard
-long lastMsg = 0;
+PubSubClient client(AWS_endpoint, 8883, callback, espClient); //Configuração padrão do MQTT
 char msg[50];
 int value = 0;
 
 void setup_wifi() {
-
+//Setup para conexão com o WiFi
 delay(10);
-// We start by connecting to a WiFi network
 espClient.setBufferSizes(512, 512);
 Serial.println();
-Serial.print("Connecting to ");
+Serial.print("Conectando a ");
 Serial.println(ssid);
 
 WiFi.begin(ssid, password);
@@ -85,8 +62,8 @@ Serial.print(".");
 }
 
 Serial.println("");
-Serial.println("WiFi connected");
-Serial.println("IP address: ");
+Serial.println("Conectado no WiFi!");
+Serial.println("Endereço de IP: ");
 Serial.println(WiFi.localIP());
 
 timeClient.begin();
@@ -100,23 +77,26 @@ espClient.setX509Time(timeClient.getEpochTime());
 
 void reconnect() {
 digitalWrite(LED_BUILTIN, HIGH);
-// Loop until we're reconnected
-while (!client.connected()) {
-Serial.print("Attempting MQTT connection...");
-// Attempt to connect
-if (client.connect("ESPthing")) {
-Serial.println("connected");
-// Once connected, publish an announcement...
-client.publish("outTopic", "a vida é boa, sim. A vida é boa.");
-// ... and resubscribe
-client.subscribe("inTopic");
-} else {
-Serial.print("failed, rc=");
-Serial.print(client.state());
-Serial.println(" try again in 5 seconds");
+int attempt = 0;
+while (!client.connected()) {//até que não esteja conectado.
 
+Serial.print("Tentativa de conexão com o MQTT... #");
+Serial.print(attempt); 
+ 
+if (client.connect("ESPthing")) {//tentativa de conexão
+Serial.println("Conectado!");
+ digitalWrite(LED_BUILTIN, LOW);
+ delay(2000);
+ digitalWrite(LED_BUILTIN, HIGH);
+client.publish("outTopic", "a vida é boa, sim. A vida é boa.");//Publica em um tópico assim que a conexão é bem sucedida.
+client.subscribe("inTopic"); //Inscreve em um tópico.
+} 
+else {
+attempt++;
+ 
+Serial.println(" Tenta de novo em 5 segundos");
 char buf[256];
-espClient.getLastSSLError(buf,256);
+espClient.getLastSSLError(buf,256); //Captura o erro decorrente ta tentativa de conexão.
 Serial.print("WiFiClientSecure SSL error: ");
 Serial.println(buf);
 
@@ -128,65 +108,64 @@ delay(5000);
 
 void setup() {
 
-Serial.begin(115200);
+Serial.begin(115200); //Define a velocidade do serial.
 Serial.setDebugOutput(true);
 // initialize digital pin LED_BUILTIN as an output.
 pinMode(LED_BUILTIN, OUTPUT);
 setup_wifi();
 delay(1000);
 if (!SPIFFS.begin()) {
-Serial.println("Failed to mount file system");
+Serial.println("Falha no Setup!");
 return;
 }
 
 Serial.print("Heap: "); Serial.println(ESP.getFreeHeap());
 
-// Load certificate file
-File cert = SPIFFS.open("/cert.der", "r"); //replace cert.crt eith your uploaded file name
+ //Carrega arquivo de certificado de conexão.
+File cert = SPIFFS.open("/cert.der", "r"); 
 if (!cert) {
-Serial.println("Failed to open cert file");
+Serial.println("Arquivo de certificado de conexão teve êxito na abertura.");
 }
 else
-Serial.println("Success to open cert file");
+Serial.println("Arquivo de certificado de conexão foi aberto.");
 
 delay(1000);
 
 if (espClient.loadCertificate(cert))
-Serial.println("cert loaded");
+Serial.println("Certificado de conexão foi carregado.");
 else
-Serial.println("cert not loaded");
+Serial.println("Certificado de conexão não foi carregado.");
 
-// Load private key file
-File private_key = SPIFFS.open("/private.der", "r"); //replace private eith your uploaded file name
+//Carrega arquivo de chave privada.
+File private_key = SPIFFS.open("/private.der", "r"); 
 if (!private_key) {
-Serial.println("Failed to open private cert file");
+Serial.println("Arquivo de certificado de chave privada não teve êxito na abertura.");
 }
 else
-Serial.println("Success to open private cert file");
+Serial.println("Arquivo de certificado de chave privada foi aberto.");
 
 delay(1000);
 
 if (espClient.loadPrivateKey(private_key))
-Serial.println("private key loaded");
+Serial.println("Certificado de chave privada foi carregado.");
 else
-Serial.println("private key not loaded");
+Serial.println("Certificado de chave privada não foi carregado.");
 
-// Load CA file
-File ca = SPIFFS.open("/ca.der", "r"); //replace ca eith your uploaded file name
+//Carrega arquivo de certificado do AWS Root.
+File ca = SPIFFS.open("/ca.der", "r"); 
 if (!ca) {
-Serial.println("Failed to open ca ");
+Serial.println("Arquivo de certificado do AWS Root não teve êxito na abertura.");
 }
 else
-Serial.println("Success to open ca");
+Serial.println("Arquivo de certificado do AWS Root foi aberto.");
 
 delay(1000);
 
 if(espClient.loadCACert(ca))
-Serial.println("ca loaded");
+Serial.println("Certificado do AWS root foi carregado.");
 else
-Serial.println("ca failed");
+Serial.println("Certificado do AWS root não foi carregado.");
 
-Serial.print("Heap: "); Serial.println(ESP.getFreeHeap());
 }
 
 void loop() {
@@ -195,20 +174,12 @@ if (!client.connected()) {
 reconnect();
 }
 client.loop();
-
-long now = millis();
-if (now - lastMsg > 2000) {
-lastMsg = now;
+ 
 ++value;
 snprintf (msg, 100, "{\"message\": \"a vida é boa, sim. A vida é boa. #%ld\"}", value);
 Serial.print("Publish message: ");
 Serial.println(msg);
 client.publish("outTopic", msg);
-Serial.print("Heap: "); 
-Serial.println(ESP.getFreeHeap()); //Low heap can cause problems
-}
-//digitalWrite(LED_BUILTIN, HIGH); // turn the LED on (HIGH is the voltage level)
-//delay(100); // wait for a second
-//digitalWrite(LED_BUILTIN, LOW); // turn the LED off by making the voltage LOW
-//delay(100); // wait for a second
+
+ delay(5000);
 }
