@@ -80,7 +80,7 @@ digitalWrite(LED_BUILTIN, HIGH);
 int attempt = 0;
 while (!client.connected()) {//até que não esteja conectado.
 
-Serial.print("Tentativa de conexão com o MQTT... #");
+Serial.println("Tentativa de conexão com o MQTT... #");
 Serial.print(attempt); 
  
 if (client.connect("ESPthing")) {//tentativa de conexão
