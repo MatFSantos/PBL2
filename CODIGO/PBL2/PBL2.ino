@@ -21,12 +21,12 @@ void callback(char* topic, byte* payload, unsigned int length);
 void setupWifi();
 void reconnect();
 void carregarArquivos();
-char * capturarHora();
+int * capturarHora();
 int calcularTempo(char * hora_inicio,char * hora_fim);
 
 //variaveis globais:
-char * hora_inicio;
-char * hora_fim;
+int * hora_inicio = 0;
+int * hora_fim = 0;
 int tempo_ativo = 1200;
 int tempo_desligar = 0;
 
@@ -44,7 +44,7 @@ void setup() {
   setupWifi();
   delay(1000);
   carregarArquivos();
-
+  
 }
 
 void loop() {
@@ -74,15 +74,24 @@ void callback(char * topic, byte * payload, unsigned int length){
   if(!strcmp(topic, "ON_OFF")){
     if(!digitalRead(LED_BUILTIN)){
       digitalWrite(LED_BUILTIN, HIGH);
-      //hora_fim = capturarHora();
+      hora_fim = capturarHora();
+      Serial.println(hora_fim[0]);
+      Serial.println(hora_fim[1]);
+      Serial.println(hora_fim[2]);
+      Serial.println(hora_fim[3]);
+      
       //tempo_ativo = calcularTempo(hora_inicio, hora_fim);
-      char * tempo_ativo_char;
+      
       //itoa(tempo_ativo,tempo_ativo_char, 10 );
       //client.publish("TEMPO_ATIVO", tempo_ativo_char);
     }
     else{
       digitalWrite(LED_BUILTIN, LOW);
-      //hora_inicio = capturarHora();
+      hora_inicio = capturarHora();
+      Serial.println(hora_inicio[0]);
+      Serial.println(hora_inicio[1]);
+      Serial.println(hora_inicio[2]);
+      Serial.println(hora_inicio[3]);
     }
   }
   else if(!strcmp(topic, "TEMPORIZADOR")){
@@ -245,3 +254,14 @@ void carregarArquivos(){
     else
     Serial.println("Falha ao carregar o arquivo do AWS Root.");
 } // end_carregarArquivos
+
+
+int * capturarHora(){
+  int * vetor_data = (int*) malloc(sizeof(int)*4);
+
+  vetor_data[0] = timeClient.getDay();
+  vetor_data[1] = timeClient.getHours();
+  vetor_data[2] = timeClient.getMinutes();
+  vetor_data[3] = timeClient.getSeconds();
+  return vetor_data;
+}
