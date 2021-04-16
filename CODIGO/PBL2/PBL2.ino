@@ -3,6 +3,8 @@
 #include <PubSubClient.h>
 #include <NTPClient.h>
 
+
+#define BUTTON D3
 // nome da rede WIFI:
 const char* ssid = "Fazendinha";
 //senha da rede WIFI:
@@ -22,13 +24,15 @@ void setupWifi();
 void reconnect();
 void carregarArquivos();
 int * capturarHora();
-int calcularTempo(char * hora_inicio,char * hora_fim);
+int calcularTempo(int * data_hora_inicio,int * data_hora_fim);
+int calcularSegundos(int * data_hora);
 
 //variaveis globais:
 int * hora_inicio = 0;
 int * hora_fim = 0;
-int tempo_ativo = 1200;
+int tempo_ativo = 0;
 int tempo_desligar = 0;
+int timer = 0;
 
 //instancia um objeto do tipo WiFiClientSecure:
 WiFiClientSecure espClient;
@@ -39,21 +43,63 @@ char msg[50];
 void setup() {
   Serial.begin(115200); // inicia o display serial
   pinMode(LED_BUILTIN, OUTPUT); //inicializa o pino do LED da placa como saída.
-
+  pinMode(BUTTON, INPUT_PULLUP); // inicializa o pino do botao da placa como entrada.
+  
   // Conexao com wifi:
   setupWifi();
   delay(1000);
   carregarArquivos();
-  
 }
 
 void loop() {
   if(!client.connected())
     reconnect();
-    
   client.loop();
+
+  /*
+  if(!digitalRead(BUTTON)){
+    if(!digitalRead(LED_BUILTIN)){
+      digitalWrite(LED_BUILTIN, HIGH);
+      hora_fim = capturarHora();
+      tempo_ativo = calcularTempo(hora_inicio, hora_fim);
+      char string[50];
+      Serial.println(tempo_ativo);
+      //sprintf(string, "%d", tempo_ativo);
+      Serial.println(string);
+      //client.publish("TEMPO_ATIVO", string);
+      
+      hora_inicio = 0;
+      hora_fim = 0;
+      tempo_ativo = 0;
+      timer = 0;
+      tempo_desligar = 0;
+    }
+    else{
+      digitalWrite(LED_BUILTIN, LOW);
+      hora_inicio = capturarHora();
+    }
+  } */
+
   
-  delay(3000);
+  if(timer){
+    int * aux_hora = capturarHora();
+    if(calcularSegundos(aux_hora) == tempo_desligar){
+      digitalWrite(LED_BUILTIN, HIGH);
+      hora_fim = aux_hora;
+      tempo_ativo = calcularTempo(hora_inicio, hora_fim);
+      char string[50];
+      Serial.println(tempo_ativo);
+      sprintf(string, "%d", tempo_ativo);
+      Serial.println(string);
+      client.publish("TEMPO_ATIVO", string);
+      
+      tempo_ativo = 0;
+      timer = 0;
+      tempo_desligar = 0;
+    }
+  }
+  
+  delay(500);
 }
 
 
@@ -75,31 +121,34 @@ void callback(char * topic, byte * payload, unsigned int length){
     if(!digitalRead(LED_BUILTIN)){
       digitalWrite(LED_BUILTIN, HIGH);
       hora_fim = capturarHora();
-      Serial.println(hora_fim[0]);
-      Serial.println(hora_fim[1]);
-      Serial.println(hora_fim[2]);
-      Serial.println(hora_fim[3]);
-      
-      //tempo_ativo = calcularTempo(hora_inicio, hora_fim);
-      
-      //itoa(tempo_ativo,tempo_ativo_char, 10 );
-      //client.publish("TEMPO_ATIVO", tempo_ativo_char);
+      tempo_ativo = calcularTempo(hora_inicio, hora_fim);
+      char string[50];
+      //Serial.println(tempo_ativo);
+      sprintf(string, "%d", tempo_ativo);
+      //Serial.println(string);
+      client.publish("TEMPO_ATIVO", string);
+
+      hora_inicio = 0;
+      hora_fim = 0;
+      tempo_ativo = 0;
+      timer = 0;
+      tempo_desligar = 0;
     }
     else{
       digitalWrite(LED_BUILTIN, LOW);
       hora_inicio = capturarHora();
-      Serial.println(hora_inicio[0]);
-      Serial.println(hora_inicio[1]);
-      Serial.println(hora_inicio[2]);
-      Serial.println(hora_inicio[3]);
     }
   }
   else if(!strcmp(topic, "TEMPORIZADOR")){
     if(digitalRead(LED_BUILTIN)){
       digitalWrite(LED_BUILTIN, LOW);
-      //hora_inicio = capturarHora();
+      hora_inicio = capturarHora();
+      timer = 1;
     }
-    tempo_desligar = atoi(text);
+    
+    int aux = atoi(text);
+    Serial.println(aux);
+    tempo_desligar =(aux*60) + calcularSegundos(hora_inicio);
   }
 }
 
@@ -208,16 +257,17 @@ void carregarArquivos(){
   File cert = SPIFFS.open("/cert.der", "r");
   if(!cert)
     Serial.println("Arquivo de certificado de conexão não teve êxito na abertura.");
-  else
+  else{
     Serial.println("Arquivo de certificado de conexão teve êxito na abertura.");
+    digitalWrite(LED_BUILTIN, LOW);
+    delay(1000);
+  }
   
-  digitalWrite(LED_BUILTIN, LOW);
-  delay(1000);
-  digitalWrite(LED_BUILTIN, HIGH);
-  delay(1000);
-  
-  if(espClient.loadCertificate(cert))
+  if(espClient.loadCertificate(cert)){
     Serial.println("Arquivo de certificado carregado.");
+    digitalWrite(LED_BUILTIN, HIGH);
+    delay(1000);
+  }
   else
     Serial.println("Falha ao carregar o arquivo de certificado.");
   
@@ -225,16 +275,17 @@ void carregarArquivos(){
   File private_key = SPIFFS.open("/private.der", "r");
   if(!private_key)
     Serial.println("Arquivo de chave privada não teve êxito na abertura.");
-  else
+  else{
     Serial.println("Arquivo de chave privada teve êxito na abertura.");
+    digitalWrite(LED_BUILTIN, LOW);
+    delay(1000);
+  }
   
-  digitalWrite(LED_BUILTIN, LOW);
-  delay(1000);
-  digitalWrite(LED_BUILTIN, HIGH);
-  delay(1000);
-  
-  if(espClient.loadPrivateKey(private_key))
+  if(espClient.loadPrivateKey(private_key)){
     Serial.println("Arquivo de chave privada carregado.");
+    digitalWrite(LED_BUILTIN, HIGH);
+    delay(1000);
+  }
   else
     Serial.println("Falha ao carregar o arquivo de chave privada.");
   
@@ -242,20 +293,22 @@ void carregarArquivos(){
   File ca = SPIFFS.open("/ca.der", "r");
   if(!ca)
     Serial.println("Arquivo do AWS Root não teve êxito na abertura.");
-  else
+  else{
     Serial.println("Arquivo do AWS Root teve êxito na abertura.");
+    digitalWrite(LED_BUILTIN, LOW);
+    delay(1000);
+  }
   
-  digitalWrite(LED_BUILTIN, LOW);
-  delay(1000);
-  digitalWrite(LED_BUILTIN, HIGH);
-  delay(1000);
-  if(espClient.loadCACert(ca))
+  if(espClient.loadCACert(ca)){
     Serial.println("Arquivo do AWS Root carregado.");
-    else
+    digitalWrite(LED_BUILTIN, HIGH);
+    delay(1000);
+  }
+  else
     Serial.println("Falha ao carregar o arquivo do AWS Root.");
 } // end_carregarArquivos
 
-
+//Captura a data e hora e armazena em um vetor:
 int * capturarHora(){
   int * vetor_data = (int*) malloc(sizeof(int)*4);
 
@@ -263,5 +316,37 @@ int * capturarHora(){
   vetor_data[1] = timeClient.getHours();
   vetor_data[2] = timeClient.getMinutes();
   vetor_data[3] = timeClient.getSeconds();
+
+  Serial.print(vetor_data[1]);
+  Serial.print(":");
+  Serial.print(vetor_data[2]);
+  Serial.print(":");
+  Serial.println(vetor_data[3]);
   return vetor_data;
+}
+
+//Calcula o tempo, em segundos, do inicio até o fim de um determinado evento:
+int calcularTempo(int * data_hora_inicio,int * data_hora_fim){
+  int segundo_fim = 0, segundo_inicio = 0;
+  
+  //captura os segundos do dia em que a led foi ligada:
+  segundo_fim = calcularSegundos(data_hora_fim);
+    
+  //captura os segundos do dia em que a led foi desligada:
+  segundo_inicio = calcularSegundos(data_hora_inicio);
+  
+  //verifica se esta no mesmo dia e retorna o periodo que a led ficou ativa:
+  if(data_hora_inicio[0] == data_hora_fim[0])
+    return segundo_fim - segundo_inicio;
+  else{
+    if(data_hora_fim[0] - data_hora_inicio[0] > 0)
+      return segundo_fim + (86400 - segundo_inicio) + (86400*(data_hora_fim[0] - data_hora_inicio[0]- 1));
+    else
+      return segundo_fim + (86400 - segundo_inicio) + (86400*(data_hora_fim[0] - data_hora_inicio[0] + 7));
+  }
+}
+
+//Calcula o tempo, em segundos, do dia atual
+int calcularSegundos(int * data_hora){
+  return (data_hora[1]*3600) + (data_hora[2]*60) + data_hora[3];
 }
