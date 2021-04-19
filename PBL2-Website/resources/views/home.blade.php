@@ -19,28 +19,28 @@
 <!-- Colocar o que vem do callback pelo MQTT no topico STATE. -->
 <p>  </p>
 
-<a href="/home/att" class="btn btn-dark"> Mudar estado </a>
+<button id="buttonState" type="button" class="btn btn-dark"> Mudar estado </button>
 
 
 <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.1/dist/umd/popper.min.js" integrity="sha384-SR1sx49pcuLnqZUnnPwx6FCym0wLsk5JZuNx2bPPENzswTNFaQU1RDvt3wT4gWFG" crossorigin="anonymous"></script>
-<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/js/bootstrap.min.js" integrity="sha384-j0CNLUeiqtyaRmlzUHCPZ+Gy5fQu0dQ6eZ/xAww941Ai1SxSY+0EQqNXNE6DZiVc" crossorigin="anonymous"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/js/bootstrap.bundle.min.js" integrity="sha384-JEW9xMcG8R+pH31jmWH6WWP0WintQrMb4s7ZOdauHnUtxwoG2vI5DkLtS3qm9Ekf" crossorigin="anonymous"></script>    
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.form/4.3.0/jquery.form.min.js"> </script>
+
 <script> 
+    $('#buttonState').on('click', function(){
+        console.log("Tá funcionando!");
+        $.ajax({
+            url: '{{route('home.att')}}',
+            type: 'get',
+            success: function(){
+                console.log(response);
+            }
+            
+        });
+    });
 
-    function changeState(current) {
-        $.ajax ({
-            url : '{{url("home/state")}}',
-            type : 'get',
-            data: {data},
-            success: function(data)    {
-                
-                }
-            })
-        }else{
-
-        }
-    }
 
 </script>
 </body>

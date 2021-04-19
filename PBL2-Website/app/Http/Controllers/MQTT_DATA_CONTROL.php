@@ -6,23 +6,17 @@ use Illuminate\Http\Request;
 
 class MQTT_DATA_CONTROL extends Controller
 {
-
-
+    
     public function home(){
         
         $state = "NaN";
         $verify = "NaN";
         return view('home', compact('state','verify'));
     }
-    public function mqtt_function($state){
-        $mqtt = MQTT::connection();
+    public function mqtt_function(){
         $verify = "";
-        $mqtt->subscribe('CONEXAO', function (string $topic, string $message) {
-            echo sprintf('Received QoS level 0 message on topic [%s]: %s', $topic, $message);    
-            //FALTA COISA
-
-        }, 0);
-
+        
+        $state = "att";
         $mqtt->subscribe('STATE', function (string $topic, string $message) {
             echo sprintf('Received QoS level 0 message on topic [%s]: %s', $topic, $message);    
             //FALTA COISA
@@ -30,8 +24,13 @@ class MQTT_DATA_CONTROL extends Controller
 
         if($state == "att"){
             $mqtt->publish('ON_OFF', 'att', 0);
-            return view('home', compact('state','verify'));
+            $stateSuccess['success'] = true;
+            echo json_enconde($stateSuccess);
+            return response()->json(['verify'=>$verify, 'state'=> $state]);
         }
+        $stateSuccess['success'] = false;
+        echo json_enconde($stateSuccess);
+        return response()->json(['verify'=>$verify, 'state'=> $state]);
         /*else($state == "temporizer"){
 
 

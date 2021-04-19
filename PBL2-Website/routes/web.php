@@ -13,4 +13,4 @@ use Illuminate\Support\Facades\Route;
 |
 */
 Route::get('home', 'App\Http\Controllers\MQTT_DATA_CONTROL@home')->name('home');
-Route::get('home/{state}', 'App\Http\Controllers\MQTT_DATA_CONTROL@mqtt_function')->name('home.mqtt');
+Route::get('home/att', 'App\Http\Controllers\MQTT_DATA_CONTROL@mqtt_function')->name('home.att');
