@@ -12,5 +12,7 @@ use Illuminate\Support\Facades\Route;
 | contains the "web" middleware group. Now create something great!
 |
 */
-Route::get('home', 'App\Http\Controllers\MQTT_DATA_CONTROL@home')->name('home');
-Route::get('home/att', 'App\Http\Controllers\MQTT_DATA_CONTROL@mqtt_function')->name('home.att');
+Route::get('', 'App\Http\Controllers\MQTT_DATA_CONTROL@home')->name('home');
+Route::get('att', 'App\Http\Controllers\MQTT_DATA_CONTROL@change_state')->name('att');
+Route::get('schedule', 'App\Http\Controllers\MQTT_DATA_CONTROL@scheduler')->name('schedule');
+//[MQTT_DATA_CONTROL::class, 'scheduler']

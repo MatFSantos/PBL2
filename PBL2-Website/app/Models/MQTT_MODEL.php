@@ -10,8 +10,6 @@ class MQTT_MODEL extends Model
 {
     use HasFactory;
 
-    protected $mqtt = MQTT::connection();
-
     
 
     public function run(){
