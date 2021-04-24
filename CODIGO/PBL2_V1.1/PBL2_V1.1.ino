@@ -15,7 +15,7 @@ const char * ssid = "Fazendinha";
 const char * password = "15253545";
 
 //O end point da thing criada no AWS:
-const char * awsEndPoint = "a2jm8vp5br1x7j-ats.iot.us-east-1.amazonaws.com";
+const char * awsEndPoint = "";
 
 //instancia um objeto do tipo WiFiUDP:
 WiFiUDP ntpUDP;
