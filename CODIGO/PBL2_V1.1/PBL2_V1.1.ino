@@ -24,9 +24,9 @@ void setupWifi(); //Procedimento para conectar a placa ao WiFi.
 void reconnect(); //Procedimento para conectar a placa ao MQTT.
 void carregarArquivos(); // Procedimento que carrega os arquivos de certificados do AWS.
 int * capturarData(); // Procedimento que captura o dia, hora, minuto e segundo do instante em que foi chamado.
-int calcularTempo(int fim [4], int inicio [4]); //Calcula qual o período de tempo, em segundos, que se passou do inicio ao fim.
-int calcularSegundos(int instante [4]); // Calcula qual o período de tempo, em segundos, que se passou do inicio do dia ao instante.
-int * fusoHorario(int data [4]); // Modifica o fuso horário da data para o Br.
+int calcularTempo(int * fim, int * inicio ); //Calcula qual o período de tempo, em segundos, que se passou do inicio ao fim.
+int calcularSegundos(int * instante); // Calcula qual o período de tempo, em segundos, que se passou do inicio do dia ao instante.
+int * fusoHorario(int * data); // Modifica o fuso horário da data para o Br.
 void ligarLed(); //Faz a ligação do led.
 void desligarLed(); // Desliga o led.
 
@@ -96,7 +96,7 @@ void loop() {
   if(flag_desligar){
     //captura a hora:
     int * aux_data = capturarData();
-    if(calcularSegundos(aux_data) == tempo_ligar){
+    if(calcularSegundos(aux_data) == tempo_desligar){
       if(!digitalRead(LED_BUILTIN))
         desligarLed();
 
@@ -108,13 +108,13 @@ void loop() {
     free(aux_data);
   }
 
-  if(contador == 20){
+  if(contador == 30){
     //Avisa, periodicamente, que a placa esta ativa:
     client.publish("VERIFICAR","{\"status\": \"PLACA ATIVA\"}");
     contador = 0;
   }
 
-  delay(500);
+  delay(200);
   contador++;
 }
 
@@ -132,7 +132,7 @@ void callback(char * topic, byte * payload, unsigned int length){
   Serial.println(topic);
 
   //Verifica em qual tópico foi recebida a mensagem:
-  if(strcmp(topic, "ON_OFF")){
+  if(!strcmp(topic, "ON_OFF")){
     //Verifica se a led esta ligada:
     if(!digitalRead(LED_BUILTIN))
       desligarLed();
@@ -173,7 +173,7 @@ void callback(char * topic, byte * payload, unsigned int length){
     if(!strcmp(time1, "0")){
       //Se for, o led é ligado (caso nao esteja):
       flag_ligar = false;
-      tempo_desligar = 0;
+      tempo_ligar = 0;
       if(digitalRead(LED_BUILTIN))
         ligarLed();
       
@@ -183,11 +183,15 @@ void callback(char * topic, byte * payload, unsigned int length){
       
       //se time2 for diferente de 0, a led terá um tempo para desligar:
       if(strcmp(time2, "0")){
-
+        
         //calculo o tempo de desligar, a partir de agora:
         int aux = atoi(time2);
         tempo_desligar = (aux*60) + calcularSegundos(data);
+        
         flag_desligar = true;
+        
+        if(tempo_desligar > 86400)
+          tempo_desligar = tempo_desligar - 86400;
       }
     }
     //Se time1 não for 0, a led terá um tempo para ligar
@@ -195,6 +199,9 @@ void callback(char * topic, byte * payload, unsigned int length){
       flag_ligar = true;
       int aux = atoi(time1);
       tempo_ligar = (aux*60) + calcularSegundos(data);
+
+      if(tempo_ligar > 86400)
+        tempo_ligar = tempo_ligar - 86400;
       
       //Reinicio a flag e tempo de desligar:
       flag_desligar = false;
@@ -207,6 +214,7 @@ void callback(char * topic, byte * payload, unsigned int length){
         flag_desligar = true;
       }
     }
+    free(data);
   }
 }
 
@@ -381,8 +389,8 @@ void carregarArquivos(){
  * return;
  *    vetor contendo dia da semana, hora, minuto e segundo.
  */
-int *capturarData(){
-  int vetor_data[4];
+int * capturarData(){
+  int * vetor_data = (int*) malloc(sizeof(int)*4);
 
   //capturo a data:
   vetor_data[0] = timeClient.getDay();
@@ -390,7 +398,6 @@ int *capturarData(){
   vetor_data[2] = timeClient.getMinutes();
   vetor_data[3] = timeClient.getSeconds();
 
-  free(vetor_data);
   return fusoHorario(vetor_data);
 }
 
@@ -405,15 +412,15 @@ int *capturarData(){
  * return:
  *    o tempo que se passou do inicio para o fim (parâmetros) em segundos.
  */
-int calcularTempo(int fim [4], int inicio [4]){
+int calcularTempo(int * fim, int * inicio){
   int segundos_fim = 0, segundos_inicio = 0;
 
   //captura os segundos do dia em que a led foi ligada:
   segundos_fim = calcularSegundos(fim);
-
+  
   //captura os segundos do dia em que a led foi desligada:
   segundos_inicio = calcularSegundos(inicio);
-
+  
   //Verifica se não houve um "passar de dias" e retorna o período que a led ficou ativa:
   if(inicio[0] == fim[0])
     return segundos_fim - segundos_inicio;
@@ -432,8 +439,8 @@ int calcularTempo(int fim [4], int inicio [4]){
  * return:
  *    retorna o tempo, em segundos, do dia.
  */
-int calcularSegundos(int instante [4]){
-  return (instante[1] * 3600) + (instante[2] * 60) + instante[3]; 
+int calcularSegundos(int * instante){
+  return (instante[1] * 3600) + (instante[2] * 60) + instante[3];
 }
 
 
@@ -447,16 +454,22 @@ void desligarLed(){
   //Desliga o led e captura o tempo total que ficou ligado:
   digitalWrite(LED_BUILTIN, HIGH);
   hora_fim = capturarData();
+  
   int tempo_ativo = calcularTempo(hora_fim, hora_inicio);
   
   //Publica o tempo total que ficou ligada:
-  char * string1;
+  char string1[20];
   sprintf(string1, "%d", tempo_ativo);
-  char * string2 = "{\"status\": \"";
-  char * string3 = "\"}";
+  
+  char string2[39] = "{\"status\": \"";
+  char string3[4] = "\"}";
+  
   strcat(string2, string1);
   strcat(string2, string3);
+  
   Serial.println(string2);
+  Serial.println(strlen(string2));
+  
   client.publish("TEMPO_ATIVO", string2);
 
   //Publica o novo estado da lampada (desligado):
@@ -478,7 +491,7 @@ void desligarLed(){
 void ligarLed(){
   digitalWrite(LED_BUILTIN, LOW);
   hora_inicio = capturarData();
-
+  
   //Publica o novo estado da lampada (ligada):
   client.publish("ESTADO","{\"status\": \"LIGADA\"}");
 }
@@ -492,7 +505,7 @@ void ligarLed(){
  * return:
  *    retorna o fuso horário correto.
  */
-int * fusoHorario(int data [4]){
+int * fusoHorario(int * data){
   if(data[1] >= 3)
     data[1] = data[1] - 3;
   else{
