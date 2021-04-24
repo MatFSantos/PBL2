@@ -2,9 +2,13 @@
 #include <ESP8266WiFi.h>
 #include <PubSubClient.h>
 #include <NTPClient.h>
+#include <EEPROM.h>
 
 //Pino do botao da placa
 #define BUTTON D3
+
+
+#define VERIFY 10
 
 //Nome e senha da rede WiFi:
 const char * ssid = "Fazendinha";
@@ -56,6 +60,32 @@ void setup() {
 
   //faz o carregamentos dos certificados no espClient:
   carregarArquivos();
+
+  //Conecta a placa ao MQTT
+  reconnect();
+
+  
+  EEPROM.begin(4);
+  
+  if(EEPROM.read(0) == VERIFY){
+    int tempo_ativo = EEPROM.read(1);
+    
+    char string1[20];
+    sprintf(string1, "%d", tempo_ativo);
+    
+    char string2[39] = "{\"status\": \"";
+    char string3[4] = "\"}";
+    
+    strcat(string2, string1);
+    strcat(string2, string3);
+    
+    Serial.println(string2);
+    
+    client.publish("TEMPO_ATIVO", string2);
+  
+    //Publica o novo estado da lampada (desligado):
+    client.publish("ESTADO", "{\"status\": \"DESLIGADA\"}");
+  }
 
 }
 
@@ -114,6 +144,21 @@ void loop() {
     contador = 0;
   }
 
+  if(!digitalRead(LED_BUILTIN)){
+    EEPROM.write(0, 10);
+    int * tempo = capturarData();
+    
+    int tempo_ativo = calcularTempo(tempo, hora_inicio);
+
+    EEPROM.write(1, tempo_ativo);
+    EEPROM.commit();
+    free(tempo);
+  }
+  else{
+    EEPROM.write(0,0);
+    EEPROM.commit();
+  }
+    
   delay(200);
   contador++;
 }
@@ -468,7 +513,6 @@ void desligarLed(){
   strcat(string2, string3);
   
   Serial.println(string2);
-  Serial.println(strlen(string2));
   
   client.publish("TEMPO_ATIVO", string2);
 
