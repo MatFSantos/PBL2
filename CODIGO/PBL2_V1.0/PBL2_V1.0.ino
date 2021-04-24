@@ -17,7 +17,7 @@ WiFiUDP ntpUDP;
 NTPClient timeClient(ntpUDP, "pool.ntp.org");
 
 // o end point da thing criada no AWS:
-const char* awsEndPoint = "a2jm8vp5br1x7j-ats.iot.us-east-1.amazonaws.com";
+const char* awsEndPoint = "";
 
 // declaracoes de procedimentos:
 void callback(char* topic, byte* payload, unsigned int length); //Procedimento que é chamado quando algum topico inscrito eh atualizado
