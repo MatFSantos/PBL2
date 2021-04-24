@@ -33,7 +33,8 @@ void desligarLed(); // faz o processo de desligamento do led, enviando publish e
 int * hora_inicio = 0; // instante do dia onde a led ligou (em segundos)
 int * hora_fim = 0; // instante do dia onde a led desligou (em segundos)
 int tempo_desligar = 0; // tempo programado para a led desligar
-int timer = 0; // flag para o temporizador
+int flag_ligar = 0; // flag para o temporizador
+int flag_desligar = 0; // flag para o temporizador
 int tempo_ligar = 0; // tempo programado para a led ligar
 
 //instancia um objeto do tipo WiFiClientSecure:
@@ -72,29 +73,31 @@ void loop() {
       client.publish("ESTADO", "LIGADO");
     }
   }
-
+  
   // verifica se existe um temporizador:
-  if(timer){
+  if(flag_ligar){
     //captura a hora:
     int * aux_hora = capturarHora();
+    if(calcularSegundos(aux_hora) == tempo_ligar){
+      digitalWrite(LED_BUILTIN, LOW);
+      hora_inicio = capturarHora();
 
-    if(tempo_ligar != 0){
-      if(calcularSegundos(aux_hora) == tempo_ligar){
-        digitalWrite(LED_BUILTIN, LOW);
-        hora_inicio = capturarHora();
-
-        //Publica o novo estado da lampada (ligada):
-        client.publish("ESTADO", "LIGADO");
-        tempo_ligar = 0;
-      }
+      //Publica o novo estado da lampada (ligada):
+      client.publish("ESTADO", "LIGADO");
+      tempo_ligar = 0;
+      flag_ligar = 0;
     }
     //verifica se eh a hora de desligar a led:
+  }
+
+  if(flag_desligar){
+    int * aux_hora = capturarHora();
     if(calcularSegundos(aux_hora) == tempo_desligar){
       desligarLed();
     }
   }
 
-  if(contador == 10){
+  if(contador == 15){
   //avisa, periodicamente que a placa esta ativa:
     client.publish("VERIFY", "PLACA ATIVA");
     contador = 0;
@@ -153,34 +156,36 @@ void callback(char * topic, byte * payload, unsigned int length){
     
     
     if(!strcmp(time1, "0")){
+      flag_ligar = 0;
       if(digitalRead(LED_BUILTIN)){
-        //Se estiver desligada, liga, captura o tempo de inicio e marca a flag de timer:
+        //Se estiver desligada, liga, captura o tempo de inicio e marca a flag de temporizador:
         digitalWrite(LED_BUILTIN, LOW);
         hora_inicio = capturarHora();
         client.publish("ESTADO", "LIGADO");
       }
-
+      
       if(strcmp(time2, "0")){
         int aux = atoi(time2);
         tempo_desligar =(aux*60) + calcularSegundos(hora_inicio);
-        timer = 1;
+        flag_desligar = 1;
       }else{
-        timer = 0;
+        flag_desligar = 0;
         tempo_desligar = 0;
       }
     }
     else{
+      int aux = atoi(time1);
+      int * aux_hora = capturarHora();
+      tempo_ligar = (aux*60) + calcularSegundos(aux_hora);
+      flag_ligar = 1;
       if(strcmp(time2, "0")){
-        int aux = atoi(time1);
-        int * aux_hora = capturarHora();
-        tempo_ligar = (aux*60) + calcularSegundos(aux_hora);
         aux = atoi(time2);
         tempo_desligar = (aux*60) + tempo_ligar;
-        timer  = 1;
+        flag_desligar  = 1;
       }
     }
     
-}
+  }
 
 }
 
@@ -411,7 +416,8 @@ void desligarLed(){
   hora_inicio = 0;
   hora_fim = 0;
   tempo_desligar = 0;
-  timer = 0;
+  flag_ligar = 0;
+  flag_desligar = 0;
 }
 
 /*
