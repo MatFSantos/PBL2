@@ -1,7 +1,7 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
-
+use App\Http\Controllers\MQTT_DATA_CONTROL;
 /*
 |--------------------------------------------------------------------------
 | Web Routes
@@ -12,7 +12,7 @@ use Illuminate\Support\Facades\Route;
 | contains the "web" middleware group. Now create something great!
 |
 */
-Route::get('', 'App\Http\Controllers\MQTT_DATA_CONTROL@home')->name('home');
-Route::get('att', 'App\Http\Controllers\MQTT_DATA_CONTROL@change_state')->name('att');
-Route::get('schedule', 'App\Http\Controllers\MQTT_DATA_CONTROL@scheduler')->name('schedule');
+Route::get('', [MQTT_DATA_CONTROL::class, 'home'])->name('home');
+Route::get('att', [MQTT_DATA_CONTROL::class, 'changeState'])->name('att');
+Route::get('schedule', [MQTT_DATA_CONTROL::class, 'scheduler'])->name('schedule');
 //[MQTT_DATA_CONTROL::class, 'scheduler']
