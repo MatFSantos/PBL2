@@ -28,7 +28,6 @@ class MQTT_DATA_CONTROL extends Controller
     public function scheduler(Request $request){
         $verify = "funcionando";
         $state = "tambem funcionando";
-        //$menssage = " "schedule" ";
         $schedule = $request->data['cont2'];
         $mqtt = MQTT::connection();
         $mqtt->publish('TEMPORIZADOR', $schedule, 0);
