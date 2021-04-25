@@ -145,7 +145,7 @@ void loop() {
   }
 
   if(!digitalRead(LED_BUILTIN)){
-    EEPROM.write(0, 10);
+    EEPROM.write(0, VERIFY);
     int * tempo = capturarData();
     
     int tempo_ativo = calcularTempo(tempo, hora_inicio);
