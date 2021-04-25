@@ -37,9 +37,10 @@
 </head>
 
 <body id = "corpo">
+    <button id= "buttonAtualizeDB" class="btn btn-outline-primary botao botao-agendar m-3">Atualizar Banco de Dados</button>
     <center>
         <h1 class = "title">LIGUE OU DESLIGUE SUA LÂMPADA</h1>
-        <p class = "title">Estado Atual: <span id="state">  </span></p>
+        <p class = "title">Estado Atual da Lâmpada: <span id="state">  </span></p>
 
         <button id="buttonState" class="btn btn-outline-primary botao" >ALTERAR ESTADO</button>
 
@@ -49,8 +50,7 @@
         <input  id="userSchedule" type = "text" name = "tempo" placeholder="Minuto 1, Minuto 2" />
         <button id= "buttonSchedule" class="btn btn-outline-primary botao botao-agendar">AGENDAR</button>
 
-        <input  id="userValor" type = "text" placeholder="Coloque o valor da taxa mensal" />
-        <button id= "buttonValor" class="btn btn-outline-primary botao botao-agendar">OK</button>
+       
 
         <div class = "container" style = "position: relative; top: 130px;" >
             <h1 class = "title">TABELA DE HISTÓRICO MENSAL</h1>
@@ -97,7 +97,7 @@
                 
             });
         });
-
+        
         $('#buttonSchedule').on('click', function(){
             let data =  {'cont2': $('#userSchedule').val()};
             console.log(data);
@@ -105,6 +105,17 @@
                 url: '{{route('schedule')}}',
                 type: 'get',
                 data: {data},
+                success: function(response){
+                    console.log(response);
+                }
+                
+            });
+        });
+
+        $('#buttonAtualizeDB').on('click', function(){
+            $.ajax({
+                url: '{{route('atualizerDB')}}',
+                type: 'get',
                 success: function(response){
                     console.log(response);
                 }

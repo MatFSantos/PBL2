@@ -8,7 +8,7 @@ use Config;
 
 class MQTT_DATA_CONTROL extends Controller
 {
-    public $valorEnergy;
+    public $valorTaxa = 0.16111;
 
     public function home(){
         $state = "NaN";
@@ -62,20 +62,12 @@ class MQTT_DATA_CONTROL extends Controller
         $timeActive = explode(':', $timeActive);
         $timeActive = explode('"', $timeActive[1]);
 
-        $mqtt->subscribe('VERIFICAR', function (string $topic , string $message, bool  $retained) use ($mqtt){
-            $this->verify = $message;
-            $mqtt->interrupt();
-        }, 0);
-        $mqtt->loop(true);
-
-        $verify = explode(':', $verify);
-        $verify = explode('"', $verify[1]);
-
         $state = atualizer($mqtt);
 
         $mqtt->disconnect();
 
-
+        $stateSuccess['success'] = true;
+        return response()->json(['verify'=>$verify, 'state'=>$state]); 
     }
 
 }

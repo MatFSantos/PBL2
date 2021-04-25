@@ -14,10 +14,9 @@ class CreateLogsTable extends Migration
     public function up()
     {
         Schema::create('logs', function (Blueprint $table) {
-            $table->id();
+            $table->string('data');
             $table->float('energia');
             $table->float('custo');
-            $table->timestamps();
         });
     }
 
