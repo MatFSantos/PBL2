@@ -42,11 +42,11 @@ byte packetBuffer[NTP_PACKET_SIZE]; //buffer to hold incoming & outgoing packets
 #define VERIFY 18
 
 //Nome e senha da rede WiFi:
-const char * ssid = "Fazendinha";
-const char * password = "15253545";
+const char * ssid = "***********";
+const char * password = "***********";
 
 //O end point da thing criada no AWS:
-const char * awsEndPoint = "a2jm8vp5br1x7j-ats.iot.us-east-1.amazonaws.com";
+const char * awsEndPoint = "***********************************";
 
 //instancia um objeto do tipo WiFiUDP:
 WiFiUDP ntpUDP;
@@ -79,8 +79,8 @@ boolean flag_desligar = false; // flag para o temporizador de desligar.
 int contador = 0; //contador para mandar periodicamente o tópico VERIFICAR.
 
 //Taxa de energia e potência da lampada (teoricas):
-#define TAXA 0,00016111 // reais por Wh
-#define POTENCIA 1000  //em watts
+const double TAXA =  0.16111; // reais por kWh
+const double POTENCIA =  1; //em kilowatts
 
 //Declarações para o MySQL:
 IPAddress server_addr(85,10,205,173);
@@ -575,12 +575,12 @@ void desligarLed(){
   int tempo_ativo = calcularTempo(hora_fim, hora_inicio);
   
   //Publica o tempo total que ficou ligada:
-  horas = tempo_ativo/3600; //pego a hora
+  horas =((double) tempo_ativo)/3600.0; //pego a hora
   energia = horas*POTENCIA; //pego a energia em Wh
   custo = energia*TAXA; 
   char data[15];
   sprintf(data, "%d/%d/%d", day(), month(), year());
-  
+
   enviarLogs(data, energia, custo);
   //Publica o novo estado da lampada (desligado):
   enviarEstado("DESLIGADO");
@@ -692,7 +692,6 @@ void enviarLogs(char * data, double energia, double custo) {
   // Note: since there are no results, we do not need to read any data
   // Deleting the cursor also frees up memory used
   delete cur_mem;
-  Serial.println("Informações Enviadas");
 }
 
 void enviarEstado(char * estado){
@@ -704,5 +703,4 @@ void enviarEstado(char * estado){
   // Note: since there are no results, we do not need to read any data
   // Deleting the cursor also frees up memory used
   delete cur_mem;
-  Serial.println("Informações Enviadas");
 }
