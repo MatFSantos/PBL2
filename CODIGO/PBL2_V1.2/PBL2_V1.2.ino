@@ -19,8 +19,8 @@
 #define VERIFY 10
 
 //Nome e senha da rede WiFi:
-const char * ssid = "Gomes2";
-const char * password = "lucas@1111";
+const char * ssid = "*******";
+const char * password = "********";
 
 //Declarações para o MySQL 192.168.0.106
 IPAddress server_addr(85,10,205,173);
@@ -31,7 +31,7 @@ char INSERT_SQL[] = "INSERT INTO log_node.logs (id, energia, custo) VALUES ('%d'
 char query[128];
 
 //O end point da thing criada no AWS:
-const char * awsEndPoint = "a1s2o6e2f4mlx6-ats.iot.us-east-1.amazonaws.com";
+const char * awsEndPoint = "***************";
 
 //instancia um objeto do tipo WiFiUDP:
 WiFiUDP ntpUDP;
