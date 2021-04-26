@@ -1,4 +1,3 @@
-#include <Time.h>
 #include <TimeLib.h>
 
 #include <WiFiUdp.h>
@@ -16,13 +15,13 @@
 #define TAXA 0.16111
 #define POTENCIA 10
 
-#define VERIFY 10
+#define VERIFY 15
 
 //Nome e senha da rede WiFi:
-const char * ssid = "Gomes2";
-const char * password = "lucas@1111";
+const char * ssid = "";
+const char * password = "";
 
-//Declarações para o MySQL 192.168.0.106
+//Declarações para o MySQL
 IPAddress server_addr(85,10,205,173);
 char user[] = SECRET_USERDB;
 char pass[] = SECRET_PASSDB;
@@ -31,7 +30,7 @@ char INSERT_SQL[] = "INSERT INTO log_node.logs (id, energia, custo) VALUES ('%d'
 char query[128];
 
 //O end point da thing criada no AWS:
-const char * awsEndPoint = "a1s2o6e2f4mlx6-ats.iot.us-east-1.amazonaws.com";
+const char * awsEndPoint = "";
 
 //instancia um objeto do tipo WiFiUDP:
 WiFiUDP ntpUDP;
@@ -98,22 +97,8 @@ void setup() {
   
   if(EEPROM.read(0) == VERIFY){
     int tempo_ativo = EEPROM.read(1);
-    
-    char string1[20];
-    sprintf(string1, "%d", tempo_ativo);
-    
-    char string2[39] = "{\"status\": \"";
-    char string3[4] = "\"}";
-    
-    strcat(string2, string1);
-    strcat(string2, string3);
-    
-    Serial.println(string2);
-    
-    client.publish("TEMPO_ATIVO", string2);
-  
-    //Publica o novo estado da lampada (desligado):
-    client.publish("ESTADO", "{\"status\": \"DESLIGADA\"}");
+    //estado desligada
+    //energia, custo, data
   }
 
 }
@@ -168,7 +153,7 @@ void loop() {
   }
 
   if(!digitalRead(LED_BUILTIN)){
-    EEPROM.write(0, 10);
+    EEPROM.write(0, VERIFY);
     int * tempo = capturarData();
     
     int tempo_ativo = calcularTempo(tempo, hora_inicio);
@@ -523,30 +508,13 @@ int calcularSegundos(int * instante){
 void desligarLed(){
   float energia;
   float custo;
-  time_t t = now();
-  Serial.println(t);
+
   //Desliga o led e captura o tempo total que ficou ligado:
   digitalWrite(LED_BUILTIN, HIGH);
   hora_fim = capturarData();
   
   int tempo_ativo = calcularTempo(hora_fim, hora_inicio);
-  
-  //Publica o tempo total que ficou ligada:
-  char string1[20];
-  sprintf(string1, "%d", tempo_ativo);
-  
-  char string2[39] = "{\"status\": \"";
-  char string3[4] = "\"}";
-  
-  strcat(string2, string1);
-  strcat(string2, string3);
-  
-  Serial.println(string2);
-  
-  //client.publish("TEMPO_ATIVO", string2);
-
-  //Publica o novo estado da lampada (desligado):
-  client.publish("ESTADO", "{\"status\": \"DESLIGADA\"}");
+ 
 
   //Reinicia todas as variáveis
   free(hora_inicio);
