@@ -9,6 +9,7 @@
 
 #include <MySQL_Connection.h>
 #include <MySQL_Cursor.h>
+#include "arduino_secrets.h"
 
 /******************************************************************************/
 /*PROCEDIMENTOS, VARIAVEIS E CONSTANTES DEFINIDAS PARA A CAPTURA DO TIMESTEMP:*/
@@ -38,7 +39,7 @@ byte packetBuffer[NTP_PACKET_SIZE]; //buffer to hold incoming & outgoing packets
 #define BUTTON D3
 
 // Para verificação da EEPROM:
-#define VERIFY 10
+#define VERIFY 18
 
 //Nome e senha da rede WiFi:
 const char * ssid = "Fazendinha";
@@ -63,6 +64,10 @@ int calcularSegundos(int * instante); // Calcula qual o período de tempo, em se
 int * fusoHorario(int * data); // Modifica o fuso horário da data para o Br.
 void ligarLed(); //Faz a ligação do led.
 void desligarLed(); // Desliga o led.
+void enviarLogs(String data, float energia, float custo);
+void enviarEstado(String estado);
+void sendNTPpacket(IPAddress &address);
+time_t getNtpTime();
 
 //Variaveis globais:
 int * hora_inicio = 0; // instante do dia onde a led ligou.
@@ -71,7 +76,23 @@ int tempo_desligar = 0; // tempo programado para a led desligar.
 int tempo_ligar = 0; // tempo programado para a led ligar.
 boolean flag_ligar = false; // flag para o temporizador de ligar.
 boolean flag_desligar = false; // flag para o temporizador de desligar.
-int contador = 0;
+int contador = 0; //contador para mandar periodicamente o tópico VERIFICAR.
+
+//Taxa de energia e potência da lampada (teoricas):
+#define TAXA 0,00016111 // reais por Wh
+#define POTENCIA 1000  //em watts
+
+//Declarações para o MySQL:
+IPAddress server_addr(85,10,205,173);
+char user[] = SECRET_USERDB;
+char pass[] = SECRET_PASSDB;
+
+char INSERT_SQL_LOGS[] = "INSERT INTO log_node.logs (data, energia, custo) VALUES ('%s', '%f', '%f')";
+char INSERT_SQL_STATUS[] = "UPDATE log_node.status SET estado ='%s' WHERE 1";
+char query[128];
+
+WiFiClient clientSQL;
+MySQL_Connection conn((Client *)&clientSQL);
 
 //instancia um objeto do tipo WiFiClientSecure:
 WiFiClientSecure espClient;
@@ -91,6 +112,17 @@ void setup() {
   setupWifi();
   delay(1000);
 
+  
+  while (!conn.connect(server_addr, 3306, user, pass)) {
+    Serial.println("Conexão SQL falhou.");
+    conn.close();
+    Serial.println("passou do conn");
+    delay(1000);
+    Serial.println("Conectando SQL novamente.");
+  }
+  Serial.println("Conectado ao servidor SQL."); 
+
+  delay(1000);
   //faz o carregamentos dos certificados no espClient:
   carregarArquivos();
 
@@ -106,22 +138,21 @@ void setup() {
   
   if(EEPROM.read(0) == VERIFY){
     int tempo_ativo = EEPROM.read(1);
+    double horas;
+    double energia;
+    double custo;
+  
+    //Publica o tempo total que ficou ligada:
+    horas = tempo_ativo/3600;
+    energia = horas*POTENCIA;
+    custo = energia*TAXA;
+    char data[15];
+    sprintf(data, "%d/%d/%d", day(), month(), year());
     
-    char string1[20];
-    sprintf(string1, "%d", tempo_ativo);
-    
-    char string2[39] = "{\"status\": \"";
-    char string3[4] = "\"}";
-    
-    strcat(string2, string1);
-    strcat(string2, string3);
-    
-    Serial.println(string2);
-    
-    client.publish("TEMPO_ATIVO", string2);
+    enviarLogs(data, energia, custo);
   
     //Publica o novo estado da lampada (desligado):
-    client.publish("ESTADO", "{\"status\": \"DESLIGADA\"}");
+    enviarEstado("DESLIGADO");
   }
 
 }
@@ -182,7 +213,7 @@ void loop() {
   }
 
   if(!digitalRead(LED_BUILTIN)){
-    EEPROM.write(0, 10);
+    EEPROM.write(0, VERIFY);
     int * tempo = capturarData();
     
     int tempo_ativo = calcularTempo(tempo, hora_inicio);
@@ -196,15 +227,8 @@ void loop() {
     EEPROM.commit();
   }
   
-  Serial.print(" ");
-  Serial.print(day());
-  Serial.print(".");
-  Serial.print(month());
-  Serial.print(".");
-  Serial.print(year());
-  Serial.println();
-  
-  delay(1000);
+
+  delay(300);
   contador++;
 }
 
@@ -541,6 +565,9 @@ int calcularSegundos(int * instante){
  * 
  */
 void desligarLed(){
+  double horas;
+  double energia;
+  double custo;
   //Desliga o led e captura o tempo total que ficou ligado:
   digitalWrite(LED_BUILTIN, HIGH);
   hora_fim = capturarData();
@@ -548,21 +575,15 @@ void desligarLed(){
   int tempo_ativo = calcularTempo(hora_fim, hora_inicio);
   
   //Publica o tempo total que ficou ligada:
-  char string1[20];
-  sprintf(string1, "%d", tempo_ativo);
+  horas = tempo_ativo/3600; //pego a hora
+  energia = horas*POTENCIA; //pego a energia em Wh
+  custo = energia*TAXA; 
+  char data[15];
+  sprintf(data, "%d/%d/%d", day(), month(), year());
   
-  char string2[39] = "{\"status\": \"";
-  char string3[4] = "\"}";
-  
-  strcat(string2, string1);
-  strcat(string2, string3);
-  
-  Serial.println(string2);
-  
-  client.publish("TEMPO_ATIVO", string2);
-
+  enviarLogs(data, energia, custo);
   //Publica o novo estado da lampada (desligado):
-  client.publish("ESTADO", "{\"status\": \"DESLIGADA\"}");
+  enviarEstado("DESLIGADO");
 
   //Reinicia todas as variáveis
   free(hora_inicio);
@@ -582,7 +603,7 @@ void ligarLed(){
   hora_inicio = capturarData();
   
   //Publica o novo estado da lampada (ligada):
-  client.publish("ESTADO","{\"status\": \"LIGADA\"}");
+  enviarEstado("LIGADO");
 }
 
 /*
@@ -609,8 +630,7 @@ int * fusoHorario(int * data){
 
 /*FUNÇÕES PARA CAPTURAR O TIMESTEMP USANDO O NTP E A LIBRARY TimeLib*/
 
-time_t getNtpTime()
-{
+time_t getNtpTime(){
   IPAddress ntpServerIP; // NTP server's ip address
 
   while (Udp.parsePacket() > 0) ; // discard any previously received packets
@@ -660,4 +680,29 @@ void sendNTPpacket(IPAddress &address){
   Udp.beginPacket(address, 123); //NTP requests are to port 123
   Udp.write(packetBuffer, NTP_PACKET_SIZE);
   Udp.endPacket();
+}
+
+
+void enviarLogs(char * data, double energia, double custo) {
+  sprintf(query, INSERT_SQL_LOGS, data, energia, custo);
+  // Initiate the query class instance
+  MySQL_Cursor * cur_mem = new MySQL_Cursor(&conn);
+  // Execute the query
+  cur_mem->execute(query);
+  // Note: since there are no results, we do not need to read any data
+  // Deleting the cursor also frees up memory used
+  delete cur_mem;
+  Serial.println("Informações Enviadas");
+}
+
+void enviarEstado(char * estado){
+  sprintf(query, INSERT_SQL_STATUS, estado);
+  // Initiate the query class instance
+  MySQL_Cursor * cur_mem = new MySQL_Cursor(&conn);
+  // Execute the query
+  cur_mem->execute(query);
+  // Note: since there are no results, we do not need to read any data
+  // Deleting the cursor also frees up memory used
+  delete cur_mem;
+  Serial.println("Informações Enviadas");
 }
