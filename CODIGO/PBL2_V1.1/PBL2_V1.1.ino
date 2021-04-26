@@ -11,11 +11,11 @@
 #define VERIFY 10
 
 //Nome e senha da rede WiFi:
-const char * ssid = "Fazendinha";
-const char * password = "15253545";
+const char * ssid = "*********";
+const char * password = "********";
 
 //O end point da thing criada no AWS:
-const char * awsEndPoint = "";
+const char * awsEndPoint = "*************";
 
 //instancia um objeto do tipo WiFiUDP:
 WiFiUDP ntpUDP;
