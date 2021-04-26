@@ -7,9 +7,9 @@ int contador = 0;
 #define BUTTON D3
 
 // nome da rede WIFI:
-const char* ssid = "Fazendinha";
+const char* ssid = "*************";
 //senha da rede WIFI:
-const char* password = "15253545";
+const char* password = "**************";
 
 //instancia um objeto do tipo WiFiUDP:
 WiFiUDP ntpUDP;
@@ -17,7 +17,7 @@ WiFiUDP ntpUDP;
 NTPClient timeClient(ntpUDP, "pool.ntp.org");
 
 // o end point da thing criada no AWS:
-const char* awsEndPoint = "";
+const char* awsEndPoint = "***********";
 
 // declaracoes de procedimentos:
 void callback(char* topic, byte* payload, unsigned int length); //Procedimento que é chamado quando algum topico inscrito eh atualizado

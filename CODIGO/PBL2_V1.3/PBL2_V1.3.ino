@@ -1,21 +1,52 @@
+#include <TimeLib.h>
+
 #include <WiFiUdp.h>
 #include <ESP8266WiFi.h>
 #include <PubSubClient.h>
 #include <NTPClient.h>
+
 #include <EEPROM.h>
 
-//Pino do botao da placa
+#include <MySQL_Connection.h>
+#include <MySQL_Cursor.h>
+#include "arduino_secrets.h"
+
+/******************************************************************************/
+/*PROCEDIMENTOS, VARIAVEIS E CONSTANTES DEFINIDAS PARA A CAPTURA DO TIMESTEMP:*/
+
+//Servidor NTP:
+static const char ntpServerName[] = "us.pool.ntp.org";
+
+//Time zone de São Paulo, Brasil:
+const int timeZone = -3;
+
+WiFiUDP Udp;
+// porta local para ouvir pacotes UDP
+unsigned int localPort = 8888;
+
+//Procedimentos para capturar times temp:
+time_t getNtpTime();
+void sendNTPpacket(IPAddress &address);
+
+time_t prevDisplay = 0; // Para quando o relogio for exibido
+
+//const int NTP_PACKET_SIZE = 48; // NTP time is in the first 48 bytes of message
+byte packetBuffer[NTP_PACKET_SIZE]; //buffer to hold incoming & outgoing packets
+
+/****************************************************************************************/
+/*VARIAVEIS, CONSTANTES E PROCEDIMENTOS DEFINIDOS PARA A CONEXÃO COM O AWS E COM O WIFI:*/
+//Pino do botao da placa:
 #define BUTTON D3
 
-
-#define VERIFY 10
+// Para verificação da EEPROM:
+#define VERIFY 18
 
 //Nome e senha da rede WiFi:
-const char * ssid = "*********";
-const char * password = "********";
+const char * ssid = "***********";
+const char * password = "***********";
 
 //O end point da thing criada no AWS:
-const char * awsEndPoint = "*************";
+const char * awsEndPoint = "***********************************";
 
 //instancia um objeto do tipo WiFiUDP:
 WiFiUDP ntpUDP;
@@ -33,6 +64,10 @@ int calcularSegundos(int * instante); // Calcula qual o período de tempo, em se
 int * fusoHorario(int * data); // Modifica o fuso horário da data para o Br.
 void ligarLed(); //Faz a ligação do led.
 void desligarLed(); // Desliga o led.
+void enviarLogs(String data, float energia, float custo);
+void enviarEstado(String estado);
+void sendNTPpacket(IPAddress &address);
+time_t getNtpTime();
 
 //Variaveis globais:
 int * hora_inicio = 0; // instante do dia onde a led ligou.
@@ -41,13 +76,32 @@ int tempo_desligar = 0; // tempo programado para a led desligar.
 int tempo_ligar = 0; // tempo programado para a led ligar.
 boolean flag_ligar = false; // flag para o temporizador de ligar.
 boolean flag_desligar = false; // flag para o temporizador de desligar.
-int contador = 0;
+int contador = 0; //contador para mandar periodicamente o tópico VERIFICAR.
+
+//Taxa de energia e potência da lampada (teoricas):
+const double TAXA =  0.16111; // reais por kWh
+const double POTENCIA =  1; //em kilowatts
+
+//Declarações para o MySQL:
+IPAddress server_addr(85,10,205,173);
+char user[] = SECRET_USERDB;
+char pass[] = SECRET_PASSDB;
+
+char INSERT_SQL_LOGS[] = "INSERT INTO log_node.logs (data, energia, custo) VALUES ('%s', '%f', '%f')";
+char INSERT_SQL_STATUS[] = "UPDATE log_node.status SET estado ='%s' WHERE 1";
+char query[128];
+
+WiFiClient clientSQL;
+MySQL_Connection conn((Client *)&clientSQL);
 
 //instancia um objeto do tipo WiFiClientSecure:
 WiFiClientSecure espClient;
 //Configuração padrão do MQTT:
 PubSubClient client(awsEndPoint, 8883, callback, espClient);
 char msg[50];
+
+/****************************************************************************************/
+/****************************************************************************************/
 
 void setup() {
   Serial.begin(115200); //inicia o display serial, para depuração.
@@ -58,33 +112,47 @@ void setup() {
   setupWifi();
   delay(1000);
 
+  
+  while (!conn.connect(server_addr, 3306, user, pass)) {
+    Serial.println("Conexão SQL falhou.");
+    conn.close();
+    Serial.println("passou do conn");
+    delay(1000);
+    Serial.println("Conectando SQL novamente.");
+  }
+  Serial.println("Conectado ao servidor SQL."); 
+
+  delay(1000);
   //faz o carregamentos dos certificados no espClient:
   carregarArquivos();
 
   //Conecta a placa ao MQTT
   reconnect();
 
+  //inicia o objeto Udp na portal local:
+  Udp.begin(localPort);
+  setSyncProvider(getNtpTime);
+  setSyncInterval(300);
   
   EEPROM.begin(4);
   
   if(EEPROM.read(0) == VERIFY){
     int tempo_ativo = EEPROM.read(1);
+    double horas;
+    double energia;
+    double custo;
+  
+    //Publica o tempo total que ficou ligada:
+    horas = tempo_ativo/3600;
+    energia = horas*POTENCIA;
+    custo = energia*TAXA;
+    char data[15];
+    sprintf(data, "%d/%d/%d", day(), month(), year());
     
-    char string1[20];
-    sprintf(string1, "%d", tempo_ativo);
-    
-    char string2[39] = "{\"status\": \"";
-    char string3[4] = "\"}";
-    
-    strcat(string2, string1);
-    strcat(string2, string3);
-    
-    Serial.println(string2);
-    
-    client.publish("TEMPO_ATIVO", string2);
+    enviarLogs(data, energia, custo);
   
     //Publica o novo estado da lampada (desligado):
-    client.publish("ESTADO", "{\"status\": \"DESLIGADA\"}");
+    enviarEstado("DESLIGADO");
   }
 
 }
@@ -158,8 +226,9 @@ void loop() {
     EEPROM.write(0,0);
     EEPROM.commit();
   }
-    
-  delay(200);
+  
+
+  delay(300);
   contador++;
 }
 
@@ -496,6 +565,9 @@ int calcularSegundos(int * instante){
  * 
  */
 void desligarLed(){
+  double horas;
+  double energia;
+  double custo;
   //Desliga o led e captura o tempo total que ficou ligado:
   digitalWrite(LED_BUILTIN, HIGH);
   hora_fim = capturarData();
@@ -503,21 +575,15 @@ void desligarLed(){
   int tempo_ativo = calcularTempo(hora_fim, hora_inicio);
   
   //Publica o tempo total que ficou ligada:
-  char string1[20];
-  sprintf(string1, "%d", tempo_ativo);
-  
-  char string2[39] = "{\"status\": \"";
-  char string3[4] = "\"}";
-  
-  strcat(string2, string1);
-  strcat(string2, string3);
-  
-  Serial.println(string2);
-  
-  client.publish("TEMPO_ATIVO", string2);
+  horas =((double) tempo_ativo)/3600.0; //pego a hora
+  energia = horas*POTENCIA; //pego a energia em Wh
+  custo = energia*TAXA; 
+  char data[15];
+  sprintf(data, "%d/%d/%d", day(), month(), year());
 
+  enviarLogs(data, energia, custo);
   //Publica o novo estado da lampada (desligado):
-  client.publish("ESTADO", "{\"status\": \"DESLIGADA\"}");
+  enviarEstado("DESLIGADO");
 
   //Reinicia todas as variáveis
   free(hora_inicio);
@@ -537,7 +603,7 @@ void ligarLed(){
   hora_inicio = capturarData();
   
   //Publica o novo estado da lampada (ligada):
-  client.publish("ESTADO","{\"status\": \"LIGADA\"}");
+  enviarEstado("LIGADO");
 }
 
 /*
@@ -560,4 +626,81 @@ int * fusoHorario(int * data){
       data[0] = data[0] - 1;
   }
   return data;
+}
+
+/*FUNÇÕES PARA CAPTURAR O TIMESTEMP USANDO O NTP E A LIBRARY TimeLib*/
+
+time_t getNtpTime(){
+  IPAddress ntpServerIP; // NTP server's ip address
+
+  while (Udp.parsePacket() > 0) ; // discard any previously received packets
+  //Serial.println("Transmit NTP Request");
+  // get a random server from the pool
+  WiFi.hostByName(ntpServerName, ntpServerIP);
+  //Serial.print(ntpServerName);
+ //Serial.print(": ");
+  //Serial.println(ntpServerIP);
+  sendNTPpacket(ntpServerIP);
+  uint32_t beginWait = millis();
+  while (millis() - beginWait < 1500) {
+    int size = Udp.parsePacket();
+    if (size >= NTP_PACKET_SIZE) {
+      //Serial.println("Receive NTP Response");
+      Udp.read(packetBuffer, NTP_PACKET_SIZE);  // read packet into the buffer
+      unsigned long secsSince1900;
+      // convert four bytes starting at location 40 to a long integer
+      secsSince1900 =  (unsigned long)packetBuffer[40] << 24;
+      secsSince1900 |= (unsigned long)packetBuffer[41] << 16;
+      secsSince1900 |= (unsigned long)packetBuffer[42] << 8;
+      secsSince1900 |= (unsigned long)packetBuffer[43];
+      return secsSince1900 - 2208988800UL + timeZone * SECS_PER_HOUR;
+    }
+  }
+  //Serial.println("No NTP Response :-(");
+  return 0; // return 0 if unable to get the time
+}
+
+// send an NTP request to the time server at the given address
+void sendNTPpacket(IPAddress &address){
+  // set all bytes in the buffer to 0
+  memset(packetBuffer, 0, NTP_PACKET_SIZE);
+  // Initialize values needed to form NTP request
+  // (see URL above for details on the packets)
+  packetBuffer[0] = 0b11100011;   // LI, Version, Mode
+  packetBuffer[1] = 0;     // Stratum, or type of clock
+  packetBuffer[2] = 6;     // Polling Interval
+  packetBuffer[3] = 0xEC;  // Peer Clock Precision
+  // 8 bytes of zero for Root Delay & Root Dispersion
+  packetBuffer[12] = 49;
+  packetBuffer[13] = 0x4E;
+  packetBuffer[14] = 49;
+  packetBuffer[15] = 52;
+  // all NTP fields have been given values, now
+  // you can send a packet requesting a timestamp:
+  Udp.beginPacket(address, 123); //NTP requests are to port 123
+  Udp.write(packetBuffer, NTP_PACKET_SIZE);
+  Udp.endPacket();
+}
+
+
+void enviarLogs(char * data, double energia, double custo) {
+  sprintf(query, INSERT_SQL_LOGS, data, energia, custo);
+  // Initiate the query class instance
+  MySQL_Cursor * cur_mem = new MySQL_Cursor(&conn);
+  // Execute the query
+  cur_mem->execute(query);
+  // Note: since there are no results, we do not need to read any data
+  // Deleting the cursor also frees up memory used
+  delete cur_mem;
+}
+
+void enviarEstado(char * estado){
+  sprintf(query, INSERT_SQL_STATUS, estado);
+  // Initiate the query class instance
+  MySQL_Cursor * cur_mem = new MySQL_Cursor(&conn);
+  // Execute the query
+  cur_mem->execute(query);
+  // Note: since there are no results, we do not need to read any data
+  // Deleting the cursor also frees up memory used
+  delete cur_mem;
 }
