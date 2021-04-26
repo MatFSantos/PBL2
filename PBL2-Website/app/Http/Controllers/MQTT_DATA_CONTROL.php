@@ -3,17 +3,19 @@
 namespace App\Http\Controllers;
 use PhpMqtt\Client\Facades\MQTT;
 use Illuminate\Http\Request;
+use App\Models\Log;
+use App\Models\Statu;
 use AWS;
 use Config;
 
 class MQTT_DATA_CONTROL extends Controller
 {
-    public $valorTaxa = 0.16111;
 
     public function home(){
         $state = "NaN";
         $verify = "NaN";
-        return view('home', compact('state','verify'));
+        $arrLogs = $this->sumEqualDates();
+        return view('home', compact('state','verify', 'arrLogs'));
     }
     public function changeState(){
         $mqtt = MQTT::connection();
@@ -47,27 +49,44 @@ class MQTT_DATA_CONTROL extends Controller
 
     }
 
-    public function atualizerDB(){
-        $timeActive = "";
-        $verify = "";
-        $state = "";
-        $mqtt = MQTT::connection();
-
-        $mqtt->subscribe('TEMPO_ATIVO', function (string $topic , string $message, bool  $retained) use ($mqtt){
-            $this->timeActive = $message;
-            $mqtt->interrupt();
-        }, 0);
-        $mqtt->loop(true);
-
-        $timeActive = explode(':', $timeActive);
-        $timeActive = explode('"', $timeActive[1]);
-
-        $state = atualizer($mqtt);
-
-        $mqtt->disconnect();
-
+    public function atualizerWeb(){
+        $state = Statu::all()->first()->estado;
+        $arrLogs = $this->sumEqualDates();
         $stateSuccess['success'] = true;
-        return response()->json(['verify'=>$verify, 'state'=>$state]); 
+        return response()->json(['state'=>$state, 'logs'=>$arrLogs]); 
+    }
+
+    public function sumEqualDates(){
+        $logs = Log::all();
+        $data = $logs->first()->data;
+        $arrLogs = [];
+        $sumEnergy = 0;
+        $sumCust = 0;
+        foreach ($logs as $log){                      
+            if($data == $log->data){
+                $sumEnergy += $log->energia;
+                $sumCust += $log->custo;
+            }
+            else{
+                $logAux = new Log;
+                $logAux->data = $data;
+                $logAux->energia = $sumEnergy;
+                $logAux->custo = $sumCust;
+                $arrLogs[] = $logAux;
+                $data = $log->data;
+                $sumEnergy = 0;
+                $sumCust = 0;
+                $sumEnergy = $log->energia;            
+                $sumCust = $log->custo;       
+            }
+            
+        }
+        $logAux = new Log;             
+        $logAux->data = $data;
+        $logAux->energia = $sumEnergy;
+        $logAux->custo = $sumCust;
+        $arrLogs[] = $logAux;
+        return $arrLogs;
     }
 
 }

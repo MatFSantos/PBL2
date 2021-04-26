@@ -37,7 +37,7 @@
 </head>
 
 <body id = "corpo">
-    <button id= "buttonAtualizeDB" class="btn btn-outline-primary botao botao-agendar m-3">Atualizar Banco de Dados</button>
+    <button id= "buttonAtualizeWeb" class="btn btn-outline-primary botao botao-agendar m-3">Atualizar</button>
     <center>
         <h1 class = "title">LIGUE OU DESLIGUE SUA LÂMPADA</h1>
         <p class = "title">Estado Atual da Lâmpada: <span id="state">  </span></p>
@@ -49,31 +49,26 @@
         <p class = "title" style = "font-size: 13px;">OBS: coloque zero antes da virgula para ligar imediatamente, e/ou zero depois da vírgula<br/>para não determinar tempo de desligamento</p>
         <input  id="userSchedule" type = "text" name = "tempo" placeholder="Minuto 1, Minuto 2" />
         <button id= "buttonSchedule" class="btn btn-outline-primary botao botao-agendar">AGENDAR</button>
-
-       
+             
 
         <div class = "container" style = "position: relative; top: 130px;" >
             <h1 class = "title">TABELA DE HISTÓRICO MENSAL</h1>
             <table class="table">
                 <thead>
                     <tr>
-                        <th scope="col">Dia</th>
-                        <th scope="col">$ Gasto (KWh)</th>
+                        <th scope="col">Data</th>
+                        <th scope="col">Energia(Kwh)</th>
+                        <th scope="col">Custo(R$/KWh)</th>                       
                     </tr>
                 </thead>
-                <tbody>
+                <tbody id="table">
+                    @foreach ($arrLogs as $log)
                     <tr>
-                        <th scope="row">1</th>
-                        <td>x reais</td>
+                        <th scope="row">{{$log->data}}</th>
+                        <th> {{$log->energia}}</th>
+                        <th>{{$log->custo}}</th>
                     </tr>
-                    <tr>
-                        <th scope="row">2</th>
-                        <td>x reais</td>
-                    </tr>
-                    <tr>
-                        <th scope="row">3</th>
-                        <td >x reais</td>
-                    </tr>
+                    @endforeach
                 </tbody>
             </table>
         </div>
@@ -112,17 +107,24 @@
             });
         });
 
-        $('#buttonAtualizeDB').on('click', function(){
+        $('#buttonAtualizeWeb').on('click', function(){
             $.ajax({
-                url: '{{route('atualizerDB')}}',
+                url: '{{route('atualizerWeb')}}',
                 type: 'get',
                 success: function(response){
-                    console.log(response);
+                    let logs = response['logs'];
+                    function loopItens(item, index, array){
+                        $('#table').append('<tr><th scope="row">'.concat(array[index]['data'], '</th><th>', array[index]['energia'], '</th><th>', array[index]['custo'], '</th></tr>'));                       
+                    }
+
+                    $('#state').html(response['state']);
+                    $('#table').empty();
+                    logs.forEach(loopItens);
                 }
                 
             });
         });
-
+        
     </script>
 </body>
 </html>

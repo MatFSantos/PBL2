@@ -15,8 +15,8 @@ class CreateLogsTable extends Migration
     {
         Schema::create('logs', function (Blueprint $table) {
             $table->string('data');
-            $table->float('energia');
-            $table->float('custo');
+            $table->double('energia');
+            $table->double('custo');
         });
     }
 

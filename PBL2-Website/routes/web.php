@@ -15,4 +15,4 @@ use App\Http\Controllers\MQTT_DATA_CONTROL;
 Route::get('', [MQTT_DATA_CONTROL::class, 'home'])->name('home');
 Route::get('att', [MQTT_DATA_CONTROL::class, 'changeState'])->name('att');
 Route::get('schedule', [MQTT_DATA_CONTROL::class, 'scheduler'])->name('schedule');
-Route::get('atualizerDB', [MQTT_DATA_CONTROL::class, 'atualizerDB'])->name('atualizerDB');
+Route::get('atualizerWeb', [MQTT_DATA_CONTROL::class, 'atualizerWeb'])->name('atualizerWeb');
