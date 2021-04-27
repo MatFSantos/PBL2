@@ -1,59 +1,42 @@
+/* Biblioteca para capturar o timestamp*/
 #include <TimeLib.h>
 
+/*Bibliotecas para fazer a comunicação com o MQTT usando o broker do AWS*/
 #include <WiFiUdp.h>
 #include <ESP8266WiFi.h>
 #include <PubSubClient.h>
 #include <NTPClient.h>
 
+/*Biblioteca para utilizar a memória EEPROM da ESP8266*/
 #include <EEPROM.h>
 
+/*Bibliotecas para fazer a comunicação da placa com o banco de dados MySQL*/
 #include <MySQL_Connection.h>
 #include <MySQL_Cursor.h>
+
+/*Arquivo contendo usuário e senha do MySQL*/
 #include "arduino_secrets.h"
 
 /******************************************************************************/
-/*PROCEDIMENTOS, VARIAVEIS E CONSTANTES DEFINIDAS PARA A CAPTURA DO TIMESTEMP:*/
-
-//Servidor NTP:
+/*****VARIAVEIS E CONSTANTES DEFINIDAS PARA A CAPTURA DO TIMESTEMP:***********/
+/*****************************************************************************/
+//Servidor NTP usado para o timestemp
 static const char ntpServerName[] = "us.pool.ntp.org";
 
-//Time zone de São Paulo, Brasil:
+//Time zone de São Paulo, Brasil
 const int timeZone = -3;
 
+//instancia de um objeto WiFiUDP
 WiFiUDP Udp;
+
 // porta local para ouvir pacotes UDP
 unsigned int localPort = 8888;
 
-//Procedimentos para capturar times temp:
-time_t getNtpTime();
-void sendNTPpacket(IPAddress &address);
-
-time_t prevDisplay = 0; // Para quando o relogio for exibido
-
-//const int NTP_PACKET_SIZE = 48; // NTP time is in the first 48 bytes of message
-byte packetBuffer[NTP_PACKET_SIZE]; //buffer to hold incoming & outgoing packets
-
-/****************************************************************************************/
-/*VARIAVEIS, CONSTANTES E PROCEDIMENTOS DEFINIDOS PARA A CONEXÃO COM O AWS E COM O WIFI:*/
-//Pino do botao da placa:
-#define BUTTON D3
-
-// Para verificação da EEPROM:
-#define VERIFY 18
-
-//Nome e senha da rede WiFi:
-const char * ssid = "***********";
-const char * password = "***********";
-
-//O end point da thing criada no AWS:
-const char * awsEndPoint = "***********************************";
-
-//instancia um objeto do tipo WiFiUDP:
-WiFiUDP ntpUDP;
-//instancia um objeto do tipo NTPClient:
-NTPClient timeClient(ntpUDP, "pool.ntp.org");
-
-//Declaração de procedimentos:
+//buffer para armazenar os pacotes de entrada e saída
+byte packetBuffer[NTP_PACKET_SIZE];
+/***************************************************************************************/
+/****************************DECLARAÇÃO DE PROCEDIMENTOS********************************/
+/***************************************************************************************/
 void callback(char* topic, byte *payload, unsigned int length); // Procedimento chamado quando algum tópico inscrito é atualizado.
 void setupWifi(); //Procedimento para conectar a placa ao WiFi.
 void reconnect(); //Procedimento para conectar a placa ao MQTT.
@@ -69,6 +52,37 @@ void enviarEstado(String estado);
 void sendNTPpacket(IPAddress &address);
 time_t getNtpTime();
 
+/***************************************************************************************/
+/*******VARIAVEIS E CONSTANTES DEFINIDOS PARA A CONEXÃO COM O AWS E COM O WIFI:*********/
+/***************************************************************************************/
+//Nome e senha da rede WiFi:
+const char * ssid = "***********";
+const char * password = "***********";
+
+//O end point da thing criada no AWS:
+const char * awsEndPoint = "***********************************";
+
+//instancia um objeto do tipo WiFiUDP:
+WiFiUDP ntpUDP;
+//instancia um objeto do tipo NTPClient:
+NTPClient timeClient(ntpUDP, "pool.ntp.org");
+
+//instancia um objeto do tipo WiFiClientSecure:
+WiFiClientSecure espClient;
+//Configuração padrão do MQTT:
+PubSubClient client(awsEndPoint, 8883, callback, espClient);
+char msg[50];
+
+/***************************************************************************************/
+/*********VARIAVEIS, DEFINES E CONSTANTES PARA CÁLCULOS NA LÓGICA DO PROGRAMA***********/
+/***************************************************************************************/
+
+//Pino do botao da placa
+#define BUTTON D3
+
+// Para verificação da EEPROM:
+#define VERIFY 18
+
 //Variaveis globais:
 int * hora_inicio = 0; // instante do dia onde a led ligou.
 int * hora_fim = 0; // instante do dia onde a led desligou.
@@ -82,23 +96,25 @@ int contador = 0; //contador para mandar periodicamente o tópico VERIFICAR.
 const double TAXA =  0.16111; // reais por kWh
 const double POTENCIA =  1; //em kilowatts
 
-//Declarações para o MySQL:
+/***************************************************************************************/
+/*********************VARIAVEIS E OBJETOS PARA  A CONEXÃO COM O MySQL*******************/
+/***************************************************************************************/
+
+//Endereço IP do banco MySQL usado:
 IPAddress server_addr(85,10,205,173);
+
+//usuário e senha do banco MySQL:
 char user[] = SECRET_USERDB;
 char pass[] = SECRET_PASSDB;
 
+//Comando para mandar os dados para o banco de dados:
 char INSERT_SQL_LOGS[] = "INSERT INTO log_node.logs (data, energia, custo) VALUES ('%s', '%f', '%f')";
 char INSERT_SQL_STATUS[] = "UPDATE log_node.status SET estado ='%s' WHERE 1";
 char query[128];
 
+//Objeto conn, com um clientSQL para a conexão com o MySQL:
 WiFiClient clientSQL;
 MySQL_Connection conn((Client *)&clientSQL);
-
-//instancia um objeto do tipo WiFiClientSecure:
-WiFiClientSecure espClient;
-//Configuração padrão do MQTT:
-PubSubClient client(awsEndPoint, 8883, callback, espClient);
-char msg[50];
 
 /****************************************************************************************/
 /****************************************************************************************/
@@ -112,7 +128,7 @@ void setup() {
   setupWifi();
   delay(1000);
 
-  
+  //Realiza a conexão com o MySQL:
   while (!conn.connect(server_addr, 3306, user, pass)) {
     Serial.println("Conexão SQL falhou.");
     conn.close();
@@ -131,27 +147,34 @@ void setup() {
 
   //inicia o objeto Udp na portal local:
   Udp.begin(localPort);
+
+  //Faz a sincronização do provedor para capturar o timestemp correto:
   setSyncProvider(getNtpTime);
   setSyncInterval(300);
-  
+
+  //Inicia a EEPROM:
   EEPROM.begin(4);
-  
+
+  //Verifica se tem dados Salvos:
   if(EEPROM.read(0) == VERIFY){
+
+    //Se tiver, captura e os envia para o banco de dados:
     int tempo_ativo = EEPROM.read(1);
-    double horas;
     double energia;
     double custo;
   
-    //Publica o tempo total que ficou ligada:
-    horas = tempo_ativo/3600;
-    energia = horas*POTENCIA;
+    //Envia para o banco de dados o tempo total que ficou ligada:
+    energia = (tempo_ativo/3600)*POTENCIA;
     custo = energia*TAXA;
     char data[15];
+
+    //captura a data atual e transforma em string:
     sprintf(data, "%d/%d/%d", day(), month(), year());
-    
+
+    //Envia a data, a energia e o custo para o banco de dados:
     enviarLogs(data, energia, custo);
   
-    //Publica o novo estado da lampada (desligado):
+    //envia para o banco de dados o novo estado da lampada (desligado):
     enviarEstado("DESLIGADO");
   }
 
@@ -212,22 +235,30 @@ void loop() {
     contador = 0;
   }
 
+  //Verifica se o led ta ligado para armazenar os dados na memória EEPROM:
   if(!digitalRead(LED_BUILTIN)){
+
+    //Se tiver ligado, salva o VERIFY na primeira posição da EEPROM
     EEPROM.write(0, VERIFY);
+
+    //Captura o instante e calcula o tempo que ela está ligada:
     int * tempo = capturarData();
-    
     int tempo_ativo = calcularTempo(tempo, hora_inicio);
 
+    //Salva o tempo ativo da led na posição 2 da EEPROM e "commita" a mudança:
     EEPROM.write(1, tempo_ativo);
     EEPROM.commit();
+
+    //Libera espaço:
     free(tempo);
   }
   else{
+    //Se não tiver ligada, limpa a primeira posição da EEPROM e "commita" a mudança:
     EEPROM.write(0,0);
     EEPROM.commit();
   }
   
-
+  //delay baixo para o button ser mais responsivo:
   delay(300);
   contador++;
 }
@@ -628,27 +659,33 @@ int * fusoHorario(int * data){
   return data;
 }
 
-/*FUNÇÕES PARA CAPTURAR O TIMESTEMP USANDO O NTP E A LIBRARY TimeLib*/
-
+/*
+ * Procedimento que faz a sincronização com o provedor.
+ * 
+ * return:
+ *    Retorna os segundos, desde 1970 até o instante foi chamada.
+ *    Retorna 0 se não conseguir sincronizar.
+ */
 time_t getNtpTime(){
-  IPAddress ntpServerIP; // NTP server's ip address
+  IPAddress ntpServerIP; //enderço IP do servidor NTP
 
-  while (Udp.parsePacket() > 0) ; // discard any previously received packets
-  //Serial.println("Transmit NTP Request");
-  // get a random server from the pool
+  //descartar todos os pacotes recebidos anteriormente
+  while (Udp.parsePacket() > 0);
+  // obtém um servidor aleatório do pool
   WiFi.hostByName(ntpServerName, ntpServerIP);
-  //Serial.print(ntpServerName);
- //Serial.print(": ");
-  //Serial.println(ntpServerIP);
+
+  //Envia uma solicitação NTP para o servidor obtido aleatóriamente:
   sendNTPpacket(ntpServerIP);
+
+  //Permanece no loop por 1500 ms:
   uint32_t beginWait = millis();
   while (millis() - beginWait < 1500) {
     int size = Udp.parsePacket();
     if (size >= NTP_PACKET_SIZE) {
-      //Serial.println("Receive NTP Response");
-      Udp.read(packetBuffer, NTP_PACKET_SIZE);  // read packet into the buffer
+      //ler o pacote no buffer Udp:
+      Udp.read(packetBuffer, NTP_PACKET_SIZE);
       unsigned long secsSince1900;
-      // convert four bytes starting at location 40 to a long integer
+      // Converte quatro bytes começando na localização 40 em um long int:
       secsSince1900 =  (unsigned long)packetBuffer[40] << 24;
       secsSince1900 |= (unsigned long)packetBuffer[41] << 16;
       secsSince1900 |= (unsigned long)packetBuffer[42] << 8;
@@ -656,51 +693,72 @@ time_t getNtpTime(){
       return secsSince1900 - 2208988800UL + timeZone * SECS_PER_HOUR;
     }
   }
-  //Serial.println("No NTP Response :-(");
-  return 0; // return 0 if unable to get the time
+  
+  return 0; // Retorna 0 se não for possível obter a hora
 }
 
-// send an NTP request to the time server at the given address
+/*
+ * Envia uma solicitação NTP para o servidor de horário no endereço fornecido
+ * 
+ * Parâmetros:
+ *    endereço IP do servidor.
+ */
 void sendNTPpacket(IPAddress &address){
-  // set all bytes in the buffer to 0
+  // Setta todos os bytes no buffer para 0:
   memset(packetBuffer, 0, NTP_PACKET_SIZE);
-  // Initialize values needed to form NTP request
-  // (see URL above for details on the packets)
-  packetBuffer[0] = 0b11100011;   // LI, Version, Mode
-  packetBuffer[1] = 0;     // Stratum, or type of clock
-  packetBuffer[2] = 6;     // Polling Interval
+  
+  // Inicializa os valores necessários para formar a solicitação NTP:
+  packetBuffer[0] = 0b11100011;   // LI, versão, modo
+  packetBuffer[1] = 0;     // estrado, ou tipo de clock
+  packetBuffer[2] = 6;     // Intervalo de votação
   packetBuffer[3] = 0xEC;  // Peer Clock Precision
-  // 8 bytes of zero for Root Delay & Root Dispersion
+  // 8 bytes de zero para Root Delay e Root Dispersion
   packetBuffer[12] = 49;
   packetBuffer[13] = 0x4E;
   packetBuffer[14] = 49;
   packetBuffer[15] = 52;
-  // all NTP fields have been given values, now
-  // you can send a packet requesting a timestamp:
-  Udp.beginPacket(address, 123); //NTP requests are to port 123
+
+  //Agora, envia um pacote solicitando um carimbo de data/hora:
+  Udp.beginPacket(address, 123); // Os pedidos NTP são para a porta 123
   Udp.write(packetBuffer, NTP_PACKET_SIZE);
   Udp.endPacket();
 }
 
-
+/*
+ * Envia os dados de Log para a tabela do banco de dados MySQL Logs
+ * 
+ * Parâmetros:
+ *    char * data -> data do instante que está enviando (timestemp);
+ *    double energia -> energia gasta pela Led;
+ *    double custo -> preço da energia gasta pelo Led;
+ */
 void enviarLogs(char * data, double energia, double custo) {
+  //transforma os dados em um comando do MySQL:
   sprintf(query, INSERT_SQL_LOGS, data, energia, custo);
-  // Initiate the query class instance
+  // Inicia a instancia da classe de consulta:
   MySQL_Cursor * cur_mem = new MySQL_Cursor(&conn);
-  // Execute the query
+  //Executa a consulta (query):
   cur_mem->execute(query);
-  // Note: since there are no results, we do not need to read any data
-  // Deleting the cursor also frees up memory used
+
+  // deleta o cursor para liberar memória:
   delete cur_mem;
 }
 
+/*
+ * Envia o Estado da lampada para a tabela do banco de dados MySQL estado
+ * 
+ * Parâmetros:
+ *    char * estado -> Estado atual da lampada.
+ *    
+ */
 void enviarEstado(char * estado){
+  //transforma o estado em um comando do MySQL:
   sprintf(query, INSERT_SQL_STATUS, estado);
-  // Initiate the query class instance
+  // Inicia a instancia da classe de consulta:
   MySQL_Cursor * cur_mem = new MySQL_Cursor(&conn);
-  // Execute the query
+  //Executa a consulta (query):
   cur_mem->execute(query);
-  // Note: since there are no results, we do not need to read any data
-  // Deleting the cursor also frees up memory used
+  
+  // deleta o cursor para liberar memória:
   delete cur_mem;
 }
