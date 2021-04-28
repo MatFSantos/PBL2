@@ -17,6 +17,9 @@
 /*Arquivo contendo usuário e senha do MySQL*/
 #include "arduino_secrets.h"
 
+/*Arquivo contendo usuário e senha do WiFi e o endPoint da coisa da AWS*/
+#include "credenciais.h"
+
 /******************************************************************************/
 /*****VARIAVEIS E CONSTANTES DEFINIDAS PARA A CAPTURA DO TIMESTEMP:***********/
 /*****************************************************************************/
@@ -56,11 +59,11 @@ time_t getNtpTime();
 /*******VARIAVEIS E CONSTANTES DEFINIDOS PARA A CONEXÃO COM O AWS E COM O WIFI:*********/
 /***************************************************************************************/
 //Nome e senha da rede WiFi:
-const char * ssid = "***********";
-const char * password = "***********";
+const char * ssid = USER_WIFI;
+const char * password = PASSWORD_WIFI;
 
 //O end point da thing criada no AWS:
-const char * awsEndPoint = "***********************************";
+const char * awsEndPoint = ENDPOINT_AWS;
 
 //instancia um objeto do tipo WiFiUDP:
 WiFiUDP ntpUDP;
@@ -93,8 +96,8 @@ boolean flag_desligar = false; // flag para o temporizador de desligar.
 int contador = 0; //contador para mandar periodicamente o tópico VERIFICAR.
 
 //Taxa de energia e potência da lampada (teoricas):
-const double TAXA =  0.16111; // reais por kWh
-const double POTENCIA =  1; //em kilowatts
+const double TAXA =  VALOR_TAXA; // reais por Wh
+const double POTENCIA =  VALOR_POTENCIA; //em watts
 
 /***************************************************************************************/
 /*********************VARIAVEIS E OBJETOS PARA  A CONEXÃO COM O MySQL*******************/
