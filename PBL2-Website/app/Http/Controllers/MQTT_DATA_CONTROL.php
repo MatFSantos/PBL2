@@ -30,6 +30,8 @@ class MQTT_DATA_CONTROL extends Controller
     }
     public function scheduler(Request $request){
         $schedule = $request->data['cont2'];
+        $verify = "";
+        $status = "";
         $mqtt = MQTT::connection();
         $mqtt->publish('TEMPORIZADOR', $schedule, 0);
         $mqtt->disconnect();
