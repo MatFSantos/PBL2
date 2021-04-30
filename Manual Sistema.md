@@ -71,7 +71,7 @@ Após realizar essas alterações, navegue ao outro arquivo ``.h``, ``arduino_se
 Para que seja possível carregar as instruções (código) na placa, primeiramente é necessário integrar algumas bibliotecas ao seu arduino. As bibliotecas necessárias são as quatro pastas presentes na pasta ``Libraries`` no diretório fonte do sistema (*\PBL2\Libaries*). Após a localização dessa pasta, copie as pastas dentro e cole no diretório do *Sketchbook* do *Arduino IDE* na pasta com nome de ``libaries`` (geralmente em *Documentos\Arduino\libraries*).
 
 ### Carregar código à placa NodeMCU
-Por fim, após realizar todos esses passos vocês está pronto para carregar o código em sua placa *ESP8266*. Com sua placa conectada ao computador, abra na *Arduino IDE* o arquivo ``PBL2_V1.3.ino`` ( normalmente na pasta *PBL2\PBL2_V1.3\\*)  e clique no ícone de seta no canto superior direto para carregar o código em sua placa. Espere todo o processo, e pronto, ***sua placa está configurada para uso!***
+Por fim, após realizar todos esses passos vocês está pronto para carregar o código em sua placa *NodeMCU*. Com sua placa conectada ao computador, abra na *Arduino IDE* o arquivo ``PBL2_V1.3.ino`` ( normalmente na pasta *PBL2\PBL2_V1.3\\*)  e clique no ícone de seta no canto superior direto para carregar o código em sua placa. Espere todo o processo, e pronto, ***sua placa está configurada para uso!***
 
 ## Website
 O site presente no sistema foi criado a partir do *framework Laravel* e estará presente no diretório do sistema na pasta com nome de ``PBL2-website`` e para fazer uso dessa ferramenta é necessário configurá-la. Para a configuração será necessário a presença do Xampp, do composer e do Laravel em seu computador (Vide como fazer instalação desses recursos).
