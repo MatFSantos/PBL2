@@ -1,149 +1,91 @@
 ﻿# Sistema de lâmpada Smart  - Manual do Sistema
 
-Nesse manual é explicado como o usuário faz a integração de *softwares* e outras ferramentas para consegui utilizar o ***sistema de lâmpada smart*** de forma simples e concisa. No final desse manual o usuário será capaz de usar o sistema e todas as suas funcionalidades.
+Nesse manual é explicado como o usuário faz a integração de *softwares* e outras ferramentas para consegui utilizar o ***sistema de lâmpada smart*** de forma simples e concisa. No final desse manual o usuário será capaz de usar o sistema e todas as suas funcionalidades. ***Baixe todos os arquivos referentes ao sistema e mãos à obra!***
 
-# Amazon Web Service (AWS)
-O ***sistema de lâmpada Smart*** utiliza o sistema de serviços Web da Amazon. Serviço esse que disponibiliza um servidor para a utilização do protocolo de comunicação MQTT, através do serviço *IoT Core*, que é utilizado pela placa para comunicação direta com a Web.
+## Amazon Web Service (AWS)
+O ***sistema de lâmpada Smart*** utiliza o sistema de serviços Web da Amazon (AWS). Serviço esse que disponibiliza um servidor para a utilização do protocolo de comunicação MQTT, através do serviço *IoT Core*, que é utilizado pela placa para comunicação direta com a Web.
 Assim, para a utilização do sistema é necessário fazer alguns procedimentos referentes à esse serviço que vão ser explicados à seguir.
 
 ###  Criação de uma Thing e uma Police
 O primeiro procedimento é a criação de uma *Thing* e sua *Police*. Para isso, entre no site da *AWS educate*  e navegue até o serviço *IoT Core*. No menu lateral, navegue para *Manage/Thing* e crie uma *Thing* única, dê um nome e clique em *next*. Após a *Thing* criada, Navegue no menu lateral para *Secure/Polices* e crie uma *Police*  adicionando um nome, e ao campo ***Action***  coloque ``iot:*`` e no campo ***Resource ARN*** altere  ``topic/replaceWithATopic`` para ``*``, marque a box ``Alow`` e clique em *Create*. Com isso, sua *Thing* e *Police* foram criadas.
 
 ### Criação de um certificado
-Em seguida, será necessário um certificado para a associação da *Thing* com a *Police*. Para isso, navegue no menu lateral para *Secure/Certificates* e crie um certificado. Após a criação você será direcionado para uma página onde existem alguns arquivos que serão necessários. Faça o download deles: ``A certificate for this thing``; ``A public key``; e ``A private key``. Após isso, abra o link para download de uma *Root CA*. Procure por ``RSA 2048 bit key`` clique no link e o salve. Após guardar esses arquivos, volte para *Secure/Certificates*, vá ao certificado que você criou, clique em ``...`` e vincule a *Thing* e a *Police* criadas anteriormente. Pronto, seu certificado foi criado.
+Em seguida, será necessário um certificado para a associação da *Thing* com a *Police*. Para isso, navegue no menu lateral para *Secure/Certificates* e crie um certificado. Após a criação você será direcionado para uma página onde existem alguns arquivos que serão necessários. Faça o download deles: ``A certificate for this thing``; ``A public key``; e ``A private key``. Após isso, abra o link para download de uma *Root CA*. Procure por ``RSA 2048 bit key`` clique no link e o salve. Após guardar esses arquivos, volte para *Secure/Certificates*, vá ao certificado que você criou, clique em ``...`` e vincule a *Thing* e a *Police* criadas anteriormente com a opção *Attach Thing/Pocile*. Pronto, seu certificado foi criado.
 
+### Conversão dos arquivos de certificado
+Três arquivos serão utilizados pelo sistema, são esses: ``A certificate for this thing``; ``Root CA``;  e ``A private key``. Os arquivos baixados estão em um formato que não é possível utilizar. Para isso é necessário fazer a conversão destes para um arquivo *.der*. Para fazer isso você pode instalar o software *OpenSSL* e utilizar os comandos que vão ser deixados abaixo, ou pode usar outros meios para essa conversão, contanto que o arquivo ``-certificate.pem.crt`` tenha o nome de ``cert.der``, o arquivo ``-private.pem.key`` tenha o nome de ``private.der`` e o arquivo ``AmazonRootCA1.pem`` tenha o nome de ``ca.der``. Guarde-os, tanto os convertidos, quanto os que foram baixados primeiro.
 
-## Create files and folders
+Comandos para o *OpenSSL*:
+- ``openssl x509 -in "código do seu arquivo"-certificate.pem.crt -out cert.der -outform DER``
+- ``openssl rsa -in "código do seu arquivo"-private.pem.key -out private.der -outform DER``
+- ``openssl x509 -in AmazonRootCA1.pem -out ca.der -outform DER``
+Execute-os no terminal do SO.
 
-The file explorer is accessible using the button in left corner of the navigation bar. You can create a new file by clicking the **New file** button in the file explorer. You can also create folders by clicking the **New folder** button.
+## A placa NodeMCU
+A placa *NodeMCU* é basicamente o circuito que faz todo o controle da sua lâmpada, recebendo requisições e comandos, tanto manuais quanto por meio da rede WiFi usando o Web Site. Para fazer o *setup* correto de configurações da placa, siga esse tópico até o fim.
 
-## Switch to another file
+### Conectar NodeMCU ao Computador
+Antes de qualquer coisa, a placa precisa está devidamente conectada ao seu computador para carregá-la com as instruções de execução. Para isso siga os passos a seguir para conectar com sucesso sua placa ao computador:
 
-All your files and folders are presented as a tree in the file explorer. You can switch from one to another by clicking a file in the tree.
+- Instale a IDE do arduino: *Arduino IDE*;
+> Você pode encontrá-la no site oficial da *Arduino*: https://www.arduino.cc/en/software ;
 
-## Rename a file
+- Conecte sua placa ao computador com um cabo USB e verifique se o seu drive de *USB-Serial CH340* está instalado. Se não, instale-o, será necessário para reconhecer a placa;
 
-You can rename the current file by clicking the file name in the navigation bar or by clicking the **Rename** button in the file explorer.
+ - Abra sua *Arduino IDE*  e navegue na barra de menu até *"Ferramentas->Placa->Gerenciar Placas"* e procure por *esp8266* e instale a versão mais recente;
 
-## Delete a file
+- Agora navegue no menu novamente até *"Ferramentas->Placa->ESP8266 boards*" e escolha a placa *NodeMCU 1.0(ESP-12E module)*;
 
-You can delete the current file by clicking the **Remove** button in the file explorer. The file will be moved into the **Trash** folder and automatically deleted after 7 days of inactivity.
+- Selecione a porta COM a qual sua placa está conectada em *"Ferramentas->Porta"*. Feche a *Arduino IDE*. Pronto, sua placa está conectada.
 
-## Export a file
+###  Integração dos arquivos com a NodeMCU
+Após a conversão da extensão e alteração dos nomes dos três arquivos é necessário carregá-los para dentro da placa. Para isso, siga a sequência de passos a seguir, após a conexão da *NodeMCU* e instalação da IDE em seu computador, para carregar os arquivos para a memória da placa:
 
-You can export the current file by clicking **Export to disk** in the menu. You can choose to export the file as plain Markdown, as HTML using a Handlebars template or as a PDF.
+- Transfira os arquivos convertidos, ``private.der``, ``cert.der`` e ``ca.der``, para a pasta *data* que se encontra no diretório onde está o arquivo ``PBL2_V1.3.ino``  ( normalmente na pasta *PBL2\PBL2_V1.3\\*). Deixe-os lá;
+>**OBS:** Caso não tenha pasta *data* nesse diretório, crie-a.
 
+- Vá até a pasta onde se encontram todos os arquivos ( normalmente a pasta *\PBL2*) e procure por uma pasta *zipada* com nome de ``ESP8266FS-0.5.0.zip`` e extraia o conteúdo. Deixe-o lá;
 
-# Synchronization
+- Abra o *Arduino IDE* e navegue na barra de menu até *Arquivo->Preferências* e veja qual o diretório da sua pasta de *SketchBook*. Navegue até essa pasta (normalmente fica em documentos);
 
-Synchronization is one of the biggest features of StackEdit. It enables you to synchronize any file in your workspace with other files stored in your **Google Drive**, your **Dropbox** and your **GitHub** accounts. This allows you to keep writing on other devices, collaborate with people you share the file with, integrate easily into your workflow... The synchronization mechanism takes place every minute in the background, downloading, merging, and uploading file modifications.
+- Chegando na pasta de *SketchBook* crie uma pasta com nome de ``tools`` e coloque a pasta que foi extraída no segundo passo;
 
-There are two types of synchronization and they can complement each other:
+- Feche e abra sua *Arduino IDE*;
 
-- The workspace synchronization will sync all your files, folders and settings automatically. This will allow you to fetch your workspace on any other device.
-	> To start syncing your workspace, just sign in with Google in the menu.
+- Navegue na barra de menu até *Ferramentas* e selecione ``ESP8266 Sketch data upload``;
 
-- The file synchronization will keep one file of the workspace synced with one or multiple files in **Google Drive**, **Dropbox** or **GitHub**.
-	> Before starting to sync files, you must link an account in the **Synchronize** sub-menu.
+- Espere o Upload. Pronto, os arquivos já foram carregados na placa.
 
-## Open a file
+###  Adicionando credenciais de acesso e dados às instruções da placa
+Na placa estão definidas coisas como: nome e senha de WiFi, nome e senha do banco de dados e também dados referente à lâmpada. São algumas credenciais e dados pessoais que são necessárias para o funcionamento do sistema. Então, é necessário que você altere esses dados de acordo com a sua realidade.
 
-You can open a file from **Google Drive**, **Dropbox** or **GitHub** by opening the **Synchronize** sub-menu and clicking **Open from**. Once opened in the workspace, any modification in the file will be automatically synced.
+Para realizar essa alteração navegue à pasta onde está contida o arquivo ``PBL2_V1.3.ino`` ( normalmente na pasta *PBL2\PBL2_V1.3\\*) e abra-o com a *Arduino IDE*. Já na *Arduino IDE* navegue até o arquivo ``credenciais.h`` e modifique os dados de WiFi, o valor da sua taxa local de energia, a potência da lâmpada e o *EndPoint* da *Thing* que foi criada no AWS.
+> **OBS:** O valor da taxa de energia deve ser informado em Wh, ou seja, caso o seu valor local seja em kWh faça a conversão dividindo por 10³.
 
-## Save a file
+> **OBS:** Para localizar o *EndPoint* da sua *Thing*, vá ao AWS e entre no IoT Core. No menu lateral navegue para *"Manage->Thing"* e selecione sua *Thing*. Após isso nas informações da *Thing* procure pelo menu *Interact* e copie o link *EndPoint* fornecido. Esse é o seu *EndPoint*.
 
-You can save any file of the workspace to **Google Drive**, **Dropbox** or **GitHub** by opening the **Synchronize** sub-menu and clicking **Save on**. Even if a file in the workspace is already synced, you can save it to another location. StackEdit can sync one file with multiple locations and accounts.
+Após realizar essas alterações, navegue ao outro arquivo ``.h``, ``arduino_secrets.h``, e coloque o *id* e *senha* do banco de dados utilizado. No seu caso, utilize: *lonelynioro* como usuário e *99550011$f* como senha.
 
-## Synchronize a file
+### Adicionando as bibliotecas necessárias à Arduino IDE
 
-Once your file is linked to a synchronized location, StackEdit will periodically synchronize it by downloading/uploading any modification. A merge will be performed if necessary and conflicts will be resolved.
+Para que seja possível carregar as instruções (código) na placa, primeiramente é necessário integrar algumas bibliotecas ao seu arduino. As bibliotecas necessárias são as quatro pastas presentes na pasta ``Libraries`` no diretório fonte do sistema (*\PBL2\Libaries*). Após a localização dessa pasta, copie as pastas dentro e cole no diretório do *Sketchbook* do *Arduino IDE* na pasta com nome de ``libaries`` (geralmente em *Documentos\Arduino\libraries*).
 
-If you just have modified your file and you want to force syncing, click the **Synchronize now** button in the navigation bar.
+### Carregar código à placa ESP8266
+Por fim, após realizar todos esses passos vocês está pronto para carregar o código em sua placa *ESP8266*. Com sua placa conectada ao computador, abra na *Arduino IDE* o arquivo ``PBL2_V1.3.ino`` ( normalmente na pasta *PBL2\PBL2_V1.3\\*)  e clique no ícone de seta no canto superior direto para carregar o código em sua placa. Espere todo o processo, e pronto, ***sua placa está configurada para uso!***
 
-> **Note:** The **Synchronize now** button is disabled if you have no file to synchronize.
+## Website
+O site presente no sistema foi criado a partir do *framework Laravel* e estará presente no diretório do sistema na pasta com nome de ``PBL2-website`` e para fazer uso dessa ferramenta é necessário configurá-la. Para a configuração será necessário a presença do Xampp, do composer e do Laravel em seu computador (Vide como fazer instalação desses recursos).
+>Para auxiliar esse processo o software ***Visual Studio Code*** da *Microsoft* é recomendado, porém não é essencial.
 
-## Manage file synchronization
+### Configurar Website
+Abra o terminal do seu SO e navegue à pasta ``PBL2-website``. Execute os comandos a seguir nessa mesma ordem: ``composer install``; ``composer update``; ``php artisan key:generate``. Espere os processos entre esses comandos.
 
-Since one file can be synced with multiple locations, you can list and manage synchronized locations by clicking **File synchronization** in the **Synchronize** sub-menu. This allows you to list and remove synchronized locations that are linked to your file.
+Após executar esses comandos, vá ao diretório do website, ``PBL2\PBL2-website``, crie um arquivo com nome vazio e extensão ``.env``, abra o arquivo ``.env.example`` e copie todo o seu conteúdo para o arquivo ``.env``.
 
+### Credenciais MQTT no Website
+Abra o arquivo ``.env`` e vá ao final do mesmo e você verá  vários comandos MQTT.  Serão necessários alterar alguns desses:
+- Altere o ``MQTT_HOST`` colocando o *EndPoint* da Thing do AWS;
+- Altere, em seguida, o ``MQTT_TLS_CA_FILE``,  o ``MQTT_TLS_CLIENT_CERT_FILE`` e o ``MQTT_TLS_CLIENT_CERT_KEY_FILE``, colocando os diretórios da ``Root CA``, do ``A certificate for this thing`` e da ``A private key``. Salve o arquivo.
+> **OBS:** Os arquivos devem ser colocados em seus formatos originais, sem conversão;
 
-# Publication
-
-Publishing in StackEdit makes it simple for you to publish online your files. Once you're happy with a file, you can publish it to different hosting platforms like **Blogger**, **Dropbox**, **Gist**, **GitHub**, **Google Drive**, **WordPress** and **Zendesk**. With [Handlebars templates](http://handlebarsjs.com/), you have full control over what you export.
-
-> Before starting to publish, you must link an account in the **Publish** sub-menu.
-
-## Publish a File
-
-You can publish your file by opening the **Publish** sub-menu and by clicking **Publish to**. For some locations, you can choose between the following formats:
-
-- Markdown: publish the Markdown text on a website that can interpret it (**GitHub** for instance),
-- HTML: publish the file converted to HTML via a Handlebars template (on a blog for example).
-
-## Update a publication
-
-After publishing, StackEdit keeps your file linked to that publication which makes it easy for you to re-publish it. Once you have modified your file and you want to update your publication, click on the **Publish now** button in the navigation bar.
-
-> **Note:** The **Publish now** button is disabled if your file has not been published yet.
-
-## Manage file publication
-
-Since one file can be published to multiple locations, you can list and manage publish locations by clicking **File publication** in the **Publish** sub-menu. This allows you to list and remove publication locations that are linked to your file.
-
-
-# Markdown extensions
-
-StackEdit extends the standard Markdown syntax by adding extra **Markdown extensions**, providing you with some nice features.
-
-> **ProTip:** You can disable any **Markdown extension** in the **File properties** dialog.
-
-
-## SmartyPants
-
-SmartyPants converts ASCII punctuation characters into "smart" typographic punctuation HTML entities. For example:
-
-|                |ASCII                          |HTML                         |
-|----------------|-------------------------------|-----------------------------|
-|Single backticks|`'Isn't this fun?'`            |'Isn't this fun?'            |
-|Quotes          |`"Isn't this fun?"`            |"Isn't this fun?"            |
-|Dashes          |`-- is en-dash, --- is em-dash`|-- is en-dash, --- is em-dash|
-
-
-## KaTeX
-
-You can render LaTeX mathematical expressions using [KaTeX](https://khan.github.io/KaTeX/):
-
-The *Gamma function* satisfying $\Gamma(n) = (n-1)!\quad\forall n\in\mathbb N$ is via the Euler integral
-
-$$
-\Gamma(z) = \int_0^\infty t^{z-1}e^{-t}dt\,.
-$$
-
-> You can find more information about **LaTeX** mathematical expressions [here](http://meta.math.stackexchange.com/questions/5020/mathjax-basic-tutorial-and-quick-reference).
-
-
-## UML diagrams
-
-You can render UML diagrams using [Mermaid](https://mermaidjs.github.io/). For example, this will produce a sequence diagram:
-
-```mermaid
-sequenceDiagram
-Alice ->> Bob: Hello Bob, how are you?
-Bob-->>John: How about you John?
-Bob--x Alice: I am good thanks!
-Bob-x John: I am good thanks!
-Note right of John: Bob thinks a long<br/>long time, so long<br/>that the text does<br/>not fit on a row.
-
-Bob-->Alice: Checking with John...
-Alice->John: Yes... John, how are you?
-```
-
-And this will produce a flow chart:
-
-```mermaid
-graph LR
-A[Square Rect] -- Link text --> B((Circle))
-A --> C(Round Rect)
-B --> D{Rhombus}
-C --> D
-```
+Após todo esse processo seu site está pronto para uso! Basta apenas você executar o comando ``php artisan serve`` no terminal na pasta ``PBL2-website`` e abrir no navegador com o endereço passado pelo *Laravel*.
