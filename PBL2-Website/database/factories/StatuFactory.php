@@ -5,7 +5,7 @@ namespace Database\Factories;
 use App\Models\Statu;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
-class StatufactoryFactory extends Factory
+class StatuFactory extends Factory
 {
     /**
      * The name of the factory's corresponding model.

@@ -5,7 +5,7 @@ namespace Database\Factories;
 use App\Models\Log;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
-class logfactoryFactory extends Factory
+class logFactory extends Factory
 {
     /**
      * The name of the factory's corresponding model.
@@ -21,11 +21,11 @@ class logfactoryFactory extends Factory
      */
     public function definition()
     {
-        $energia = this.faker->randomFloat($nbMaxDecimals = 6, $min = 0.2, $max = 0.8)
+        $energia = $this->faker->randomFloat($nbMaxDecimals = 6, $min = 0.2, $max = 0.8);
         return [
-            'data' => "24/04/2021";
-            'energia' => $energia;
-            'custo'=> $energia*0.41544427;
+            'data' => "24/04/2021",
+            'energia' => $energia,
+            'custo'=> $energia*0.41544427,
         ];
     }
 }
