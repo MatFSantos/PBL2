@@ -25,7 +25,7 @@ class logFactory extends Factory
         return [
             'data' => "24/04/2021",
             'energia' => $energia,
-            'custo'=> $energia*0.41544427,
+            'custo'=> $energia*0.41544427
         ];
     }
 }
