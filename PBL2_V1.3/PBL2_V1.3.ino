@@ -172,8 +172,15 @@ void setup() {
     char data[15];
 
     //captura a data atual e transforma em string:
-    sprintf(data, "%d/%d/%d", day(), month(), year());
-
+    if(day()<10 && month()<10)
+      sprintf(data, "0%d/0%d/%d", day(), month(), year());
+    else if(day()<10 && month()>=10)
+      sprintf(data, "0%d/%d/%d", day(), month(), year());
+    else if(month()<10 && day()>=10)
+      sprintf(data, "%d/0%d/%d", day(), month(), year());
+    else
+      sprintf(data, "%d/%d/%d", day(), month(), year());
+      
     //Envia a data, a energia e o custo para o banco de dados:
     enviarLogs(data, energia, custo);
   
@@ -613,7 +620,16 @@ void desligarLed(){
   energia = horas*POTENCIA; //pego a energia em Wh
   custo = energia*TAXA; 
   char data[15];
-  sprintf(data, "%d/%d/%d", day(), month(), year());
+
+  //captura a data atual e transforma em string:
+  if(day()<10 && month()<10)
+    sprintf(data, "0%d/0%d/%d", day(), month(), year());
+  else if(day()<10 && month()>=10)
+    sprintf(data, "0%d/%d/%d", day(), month(), year());
+  else if(month()<10 && day()>=10)
+    sprintf(data, "%d/0%d/%d", day(), month(), year());
+  else
+    sprintf(data, "%d/%d/%d", day(), month(), year());
 
   enviarLogs(data, energia, custo);
   //Publica o novo estado da lampada (desligado):
