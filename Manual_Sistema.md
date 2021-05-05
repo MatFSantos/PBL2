@@ -1,4 +1,5 @@
 ﻿
+﻿
 #  Sistema de lâmpada Smart - Manual do Sistema
 
 Nesse manual é explicado como o usuário faz a integração de *softwares* e outras ferramentas para consegui utilizar o ***sistema de lâmpada smart*** de forma simples e concisa. No final desse manual o usuário será capaz de usar o sistema e todas as suas funcionalidades. ***Baixe todos os arquivos referentes ao sistema e mãos à obra!***
@@ -173,6 +174,23 @@ Abra o arquivo ``.env`` e vá ao final do mesmo e você verá vários comandos M
 
 > **OBS:** Os arquivos devem ser colocados em seus formatos originais, sem conversão;
 
-# Pronto!!
-Após todo esse processo seu site está pronto para uso! Basta apenas você executar o comando ``php artisan serve`` no terminal na pasta ``PBL2-website`` e abrir no navegador com o endereço *IP* passado pelo *Laravel*.
+# Pronto!
+Após todo esse processo seu site está pronto para uso! Basta apenas você executar o comando ``php artisan serve`` no terminal na pasta ``PBL2-website`` e abrir no navegador com o endereço *IP* passado pelo *Laravel* ou utilizar *localhost:8000*.
 Existe também a possibilidade da utilização do serviço *Elastic Beanstalk* do *AWS* para hospedar o site na nuvem.
+
+## Elastic Beanstalk
+
+Para utilizar esse serviço, primeiramente é necessário que você tenha instalado o Git no seu computador e ele esteja na *Path* das variáveis de ambiente.
+Após ter o Git em seu computador vá a pasta do *Website* ``PBL2_Website`` e execute o comando ``git archive -v -o myapp.zip --format=zip HEAD`` trocando o nome ``myapp`` para o nome que desejar. Esse comando fará um arquivo *zipado* para você utilizá-lo no serviço do *AWS*.
+
+### Configurando e *zipando* o arquivo do Website
+Antes de mais nada é necessário que você adicione dentro do arquivo *zipado* os arquivos de certificado, chave e *Root* que você guardou anteriormente (copie apenas os arquivos no formato original, ignorando os arquivos que foram alterados os formatos). Após isso, copie o arquivo ``.env`` que está presente na pasta do *Website* já configurado e altere apenas os diretórios dos arquivos de  certificado, chave e *Root*  anteriormente informados, porém, como o local foi mudado é necessário alterar. Após isso você tem seu arquivo do site pronto para ser postado.
+
+### *Upando* site no Elastic Beanstalk
+Navegue no site do *AWS* até o menu do *Elastic Beanstalk*, selecione, na página inicial, *create application*. Escolha um nome de sua preferência, altere a plataforma para *PHP* e em *Plataform branch* coloque *PHP 7.4 ...* . Em *Application code*  marque *Sample application* e por fim clique no botão laranja *create application*. Espere o processo de criação.
+
+Após o processo você será direcionado para a página de edição da aplicação. Selecione *Upload and deploy*  e selecione o arquivo *zipado* contendo o site que foi editado anteriormente.
+
+Após fazer o *upload* do arquivo do site, navegue no menu lateral para *configuration*. Em *configuration* vá na categoria *software* e selecione editar. Altere o *proxy server* para *Apache* e em *Document root* coloque */public*.
+
+Pronto, tudo já foi configurado. Volte agora para a página de edição da aplicação e abra o link fornecido pelo *Elastic Beanstalk*. Por esse link qualquer pessoa pode acessar seu site.

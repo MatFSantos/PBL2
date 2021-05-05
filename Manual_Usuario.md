@@ -1,4 +1,5 @@
 ﻿
+﻿
 #  Sistema de lâmpada Smart - Manual do Usuário
 
 Nesse manual é explicado como o usuário pode usar os recursos do ***Sistema de lâmpada Smart*** no *Website*. Ao fim desse manual o leitor saberá todas as funcionalidades e como o *Website* funciona, além de aprender como ligar a lâmpada e visualizar o seu consumo.
@@ -7,7 +8,7 @@ Nesse manual é explicado como o usuário pode usar os recursos do ***Sistema de
 
 Antes de tudo, é necessário que sua placa *NodeMCU* e o *Website* já estejam devidamente configurados. Para isso, veja o manual do sistema.
 
-Após toda as configurações feitas na placa e no site, conecte a placa à energia e espere com que ela pare de piscar a Led. A Led necessariamente ligará e desligará cinco vezes. Isso indica que as conexões foram todas feitas com sucesso. Após isso, hospede o site e abra-o. Caso tenha hospedado ele localmente pelo comando ``php artisan serve``, abra-o utilizando o link ``localhost:8000`` no navegador.
+Após toda as configurações feitas na placa e no site, conecte a placa à energia e espere com que ela pare de piscar a Led. A Led necessariamente ligará e desligará cinco vezes. Isso indica que as conexões foram todas feitas com sucesso. Após isso, hospede o site e abra-o. Caso tenha hospedado ele localmente pelo comando ``php artisan serve``, abra-o utilizando o link ``localhost:8000`` no navegador. Caso tenha utilizado o serviço *Elastic Beanstalk*, abra-o com o link fornecido pelo *AWS*.
   
   Com isso já está tudo devidamente "settado" para uso ;).
 
@@ -44,3 +45,4 @@ Além de ser possível acender e apagar a Led pelo site, também é possível fa
 ## Adendo
 
 Para cada vez que o Led apaga os valores na tabela já podem ser atualizados. Para a visualização desses novos valores utilize o botão "Atualizar" para atualizar a tabela. Utilize também esse botão quando não tem certeza sobre o estado atual da lâmpada, por motivos de desligamento/ligamento manual ou desligamento/ligamento por temporizador.
+
