@@ -57,8 +57,8 @@
                 <thead>
                     <tr>
                         <th scope="col">Data</th>
-                        <th scope="col">Energia(Kwh)</th>
-                        <th scope="col">Custo(R$/KWh)</th>                       
+                        <th scope="col">Energia(Wh)</th>
+                        <th scope="col">Custo(R$)</th>                       
                     </tr>
                 </thead>
                 <tbody id="table">
