@@ -18,6 +18,6 @@ class DatabaseSeeder extends Seeder
     public function run()
     {
          Log::factory(10)->create();
-         Statu::factory()->create();
+         //Statu::factory()->create();
     }
 }
