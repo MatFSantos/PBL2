@@ -23,7 +23,7 @@ class logFactory extends Factory
     {
         $energia = $this->faker->randomFloat($nbMaxDecimals = 6, $min = 0.2, $max = 0.8);
         return [
-            'data' => "24/04/2021",
+            'data' => "01/05/2021",
             'energia' => $energia,
             'custo'=> $energia*0.41544427
         ];
