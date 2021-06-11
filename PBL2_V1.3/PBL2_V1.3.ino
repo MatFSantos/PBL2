@@ -122,7 +122,7 @@ MySQL_Connection conn((Client *)&clientSQL);
 /****************************************************************************************/
 /****************************************************************************************/
 
-void setup() {
+void setup(){
   Serial.begin(115200); //inicia o display serial, para depuração.
   pinMode(LED_BUILTIN, OUTPUT); // inicializa o pino do led como saída.
   pinMode(BUTTON, INPUT_PULLUP); //inicializa o pino do botao como entrada.
